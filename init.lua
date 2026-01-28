@@ -97,6 +97,9 @@ vim.opt.signcolumn = "yes"    -- Keep space for error icons
 vim.opt.guicursor = "n-v-c-sm:block,i-ci-ve:ver25,r-cr-o:hor20" -- Standard cursor
 vim.opt.cursorline = true     -- Highlight the line the cursor is on
 
+-- Clear search highlights on <Esc>
+vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>")
+
 -- INDENTATION (4 Spaces)
 vim.opt.tabstop = 4
 vim.opt.shiftwidth = 4
