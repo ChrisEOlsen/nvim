@@ -85,7 +85,21 @@ require("lazy").setup({
   },
   {
     "folke/zen-mode.nvim",
-    opts = {}
+    opts = {
+        on_close = function()
+            vim.opt.number = true
+            vim.opt.relativenumber = true
+        end
+    }
+  },
+
+  -- The History: Git integration
+  {
+    "tpope/vim-fugitive",
+    config = function()
+        vim.keymap.set("n", "<leader>gs", vim.cmd.Git, { desc = "Git Status" })
+        vim.keymap.set("n", "<leader>gd", ":Gdiffsplit<CR>", { desc = "Git Diff Split" })
+    end
   },
 })
 
