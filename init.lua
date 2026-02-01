@@ -186,11 +186,11 @@ vim.api.nvim_create_autocmd({ "ColorScheme", "BufEnter" }, {
 
         -- 1. Reset all standard syntax groups to link to "Normal" (plain text)
         local syntax_groups = {
-            "Constant", "Identifier", "Statement", "PreProc", "Type", "Special",
-            "Underlined", "Error", "Todo", "String", "Function", "Conditional",
-            "Repeat", "Operator", "Structure", "Boolean", "Number", "Float",
-            "Label", "Keyword", "Exception", "Include", "Define", "Macro",
-            "PreCondit", "StorageClass", "Typedef", "Tag", "SpecialChar",
+            "Constant", "Identifier", "PreProc", "Special",
+            "Underlined", "Error", "Todo", "String", "Function",
+            "Operator", "Number", "Float",
+            "Label", "Include", "Define", "Macro",
+            "PreCondit", "Tag", "SpecialChar",
             "Delimiter", "SpecialComment", "Debug"
         }
 
@@ -244,6 +244,7 @@ local lspconfig = require('lspconfig')
 lspconfig.clangd.setup({
   cmd = { "clangd", "--background-index" },
   on_attach = function(client, bufnr)
+    client.server_capabilities.semanticTokensProvider = nil
     local opts = { buffer = bufnr, noremap = true, silent = true }
     vim.keymap.set('n', 'gd', vim.lsp.buf.definition, opts)
     vim.keymap.set('n', 'K', vim.lsp.buf.hover, opts)
