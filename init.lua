@@ -126,8 +126,8 @@ vim.g.is_dark_mode = false -- Default to Light
 local function fix_cursor()
     -- Force the cursor to be visible by manually setting the highlight group
     if vim.g.is_dark_mode then
-        -- DARK MODE: Pure Black Background
-        local bg_color = "#000000"
+        -- DARK MODE: One Dark Background
+        local bg_color = "#282c34"
         local fg_color = "#ffffff"
 
         vim.api.nvim_set_hl(0, "Normal", { bg = bg_color, fg = fg_color, force = true })
@@ -135,12 +135,13 @@ local function fix_cursor()
         vim.api.nvim_set_hl(0, "EndOfBuffer", { bg = bg_color, fg = bg_color, force = true })
         vim.api.nvim_set_hl(0, "SignColumn", { bg = bg_color, force = true })
         vim.api.nvim_set_hl(0, "LineNr", { bg = bg_color, force = true })
+        vim.api.nvim_set_hl(0, "ZenBg", { bg = bg_color, force = true })
 
-        -- Cursor: White on Black
-        vim.api.nvim_set_hl(0, "Cursor", { bg = "#ffffff", fg = "#000000", force = true })
-        vim.api.nvim_set_hl(0, "TermCursor", { bg = "#ffffff", fg = "#000000", force = true })
-        -- Line highlight: Subtle gray
-        vim.api.nvim_set_hl(0, "CursorLine", { bg = "#1a1a1a", force = true })
+        -- Cursor: White on Background
+        vim.api.nvim_set_hl(0, "Cursor", { bg = "#ffffff", fg = bg_color, force = true })
+        vim.api.nvim_set_hl(0, "TermCursor", { bg = "#ffffff", fg = bg_color, force = true })
+        -- Line highlight: Slightly lighter than background
+        vim.api.nvim_set_hl(0, "CursorLine", { bg = "#2c323c", force = true })
     else
         -- LIGHT MODE: Pure White
         local bg_color = "#ffffff"
@@ -151,6 +152,7 @@ local function fix_cursor()
         vim.api.nvim_set_hl(0, "EndOfBuffer", { bg = bg_color, fg = bg_color, force = true })
         vim.api.nvim_set_hl(0, "SignColumn", { bg = bg_color, force = true })
         vim.api.nvim_set_hl(0, "LineNr", { bg = bg_color, force = true })
+        vim.api.nvim_set_hl(0, "ZenBg", { bg = bg_color, force = true })
 
         -- Cursor: Black on White
         vim.api.nvim_set_hl(0, "Cursor", { bg = "#000000", fg = "#ffffff", force = true })
