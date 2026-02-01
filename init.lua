@@ -18,36 +18,27 @@ vim.opt.rtp:prepend(lazypath)
 
 -- 2. PLUGINS
 require("lazy").setup({
-  -- The Theme: GitHub Theme (Reliable, handles cursors well)
+  -- The Theme: One Dark (Matches Codex App)
   {
-    "projekt0n/github-nvim-theme",
-    lazy = false,    -- Load immediately
-    priority = 1000, -- Load before everything else
+    "navarasu/onedark.nvim",
+    lazy = false,
+    priority = 1000,
     config = function()
-      require("github-theme").setup({
-        -- Minimal config
-        options = {
-          compile_path = vim.fn.stdpath("cache") .. "/github-theme",
-          compile_file_suffix = "_compiled",
-          hide_end_of_buffer = true, -- Hide ~ at end of buffer
-          terminal_colors = true,
-          dim_inactive = false,
-          styles = {
-            comments = "italic",
-            functions = "NONE",
-            keywords = "NONE",
-            variables = "NONE",
-            conditionals = "NONE",
-            constants = "NONE",
-            numbers = "NONE",
-            operators = "NONE",
-            strings = "NONE",
-            types = "NONE",
-          },
+      require("onedark").setup({
+        style = "dark", -- Default OneDark style
+        colors = {
+          bg0 = "#0d1117", -- Codex Code Field Background
+          fg = "#d4d4d8",  -- Zinc 300 (Codex Text)
         },
+        highlights = {
+            Normal = { bg = "#0d1117", fg = "#d4d4d8" },
+            NormalNC = { bg = "#0d1117", fg = "#d4d4d8" },
+            LineNr = { bg = "#0d1117", fg = "#52525b" }, -- Zinc 600 for line numbers
+            CursorLine = { bg = "#18181b" }, -- Zinc 900 for cursor line
+            CursorLineNr = { fg = "#ea580c", fmt = "bold" }, -- Orange 600 for active line nr
+        }
       })
-      -- Default to Light mode initially
-      vim.cmd("colorscheme github_light")
+      require("onedark").load()
     end,
   },
 
@@ -120,91 +111,8 @@ vim.opt.shiftwidth = 4
 vim.opt.expandtab = true
 vim.opt.softtabstop = 4
 
--- 4. SIMPLISTIC THEME TOGGLE (Light/Dark)
-vim.g.is_dark_mode = false -- Default to Light
-
-local function fix_cursor()
-    -- Force the cursor to be visible by manually setting the highlight group
-    if vim.g.is_dark_mode then
-        -- DARK MODE: One Dark Background
-        local bg_color = "#282c34"
-        local fg_color = "#ffffff"
-
-        vim.api.nvim_set_hl(0, "Normal", { bg = bg_color, fg = fg_color, force = true })
-        vim.api.nvim_set_hl(0, "NormalNC", { bg = bg_color, fg = fg_color, force = true })
-        vim.api.nvim_set_hl(0, "EndOfBuffer", { bg = bg_color, fg = bg_color, force = true })
-        vim.api.nvim_set_hl(0, "SignColumn", { bg = bg_color, force = true })
-        vim.api.nvim_set_hl(0, "LineNr", { bg = bg_color, force = true })
-        vim.api.nvim_set_hl(0, "ZenBg", { bg = bg_color, force = true })
-
-        -- Cursor: White on Background
-        vim.api.nvim_set_hl(0, "Cursor", { bg = "#ffffff", fg = bg_color, force = true })
-        vim.api.nvim_set_hl(0, "TermCursor", { bg = "#ffffff", fg = bg_color, force = true })
-        -- Line highlight: Slightly lighter than background
-        vim.api.nvim_set_hl(0, "CursorLine", { bg = "#2c323c", force = true })
-    else
-        -- LIGHT MODE: Pure White
-        local bg_color = "#ffffff"
-        local fg_color = "#000000"
-
-        vim.api.nvim_set_hl(0, "Normal", { bg = bg_color, fg = fg_color, force = true })
-        vim.api.nvim_set_hl(0, "NormalNC", { bg = bg_color, fg = fg_color, force = true })
-        vim.api.nvim_set_hl(0, "EndOfBuffer", { bg = bg_color, fg = bg_color, force = true })
-        vim.api.nvim_set_hl(0, "SignColumn", { bg = bg_color, force = true })
-        vim.api.nvim_set_hl(0, "LineNr", { bg = bg_color, force = true })
-        vim.api.nvim_set_hl(0, "ZenBg", { bg = bg_color, force = true })
-
-        -- Cursor: Black on White
-        vim.api.nvim_set_hl(0, "Cursor", { bg = "#000000", fg = "#ffffff", force = true })
-        vim.api.nvim_set_hl(0, "TermCursor", { bg = "#000000", fg = "#ffffff", force = true })
-        -- Line highlight: Subtle gray
-        vim.api.nvim_set_hl(0, "CursorLine", { bg = "#f0f0f0", force = true })
-    end
-end
-
-local function toggle_theme()
-    if vim.g.is_dark_mode then
-        vim.cmd("colorscheme github_light")
-        vim.g.is_dark_mode = false
-        print("Theme: Light")
-    else
-        vim.cmd("colorscheme github_dark")
-        vim.g.is_dark_mode = true
-        print("Theme: Dark")
-    end
-    fix_cursor() -- Apply cursor fix immediately after switching
-end
-
-vim.keymap.set("n", "<leader>tm", toggle_theme, { noremap = true, silent = true, desc = "Toggle Theme" })
-
--- 5. MONK MODE: PLAIN TEXT WITH COMMENTS
--- We MUST have 'syntax on' to detect comments, but we strip all other colors.
-vim.api.nvim_create_autocmd({ "ColorScheme", "BufEnter" }, {
-    pattern = "*",
-    callback = function()
-        vim.cmd("syntax on") -- Enable syntax so we know what is a comment
-
-        -- 1. Reset all standard syntax groups to link to "Normal" (plain text)
-        local syntax_groups = {
-            "Constant", "Identifier", "Statement", "PreProc", "Type", "Special",
-            "Underlined", "Error", "Todo", "String", "Function", "Conditional",
-            "Repeat", "Operator", "Structure", "Boolean", "Number", "Float",
-            "Label", "Keyword", "Exception", "Include", "Define", "Macro",
-            "PreCondit", "StorageClass", "Typedef", "Tag", "SpecialChar",
-            "Delimiter", "SpecialComment", "Debug"
-        }
-
-        for _, group in ipairs(syntax_groups) do
-            vim.api.nvim_set_hl(0, group, { link = "Normal" })
-        end
-
-        -- 2. Force Comments to be a distinct grey
-        vim.api.nvim_set_hl(0, "Comment", { fg = "#808080", italic = true, force = true })
-
-        -- 3. Re-apply cursor/background fixes
-        fix_cursor()
-    end,
-})
+-- 4. THEME SETTINGS (Simplified)
+vim.opt.termguicolors = true
 
 -- 6. REMOTE CLIPBOARD (OSC 52)
 vim.opt.clipboard = "unnamedplus"
@@ -239,7 +147,7 @@ end
 vim.keymap.set({ "x", "o" }, "iq", function() return smart_quote(true) end, { expr = true })
 vim.keymap.set({ "x", "o" }, "aq", function() return smart_quote(false) end, { expr = true })
 
--- 8. LSP & CMP SETUP
+-- 5. LSP & CMP SETUP
 local lspconfig = require('lspconfig')
 lspconfig.clangd.setup({
   cmd = { "clangd", "--background-index" },
