@@ -208,8 +208,8 @@ vim.api.nvim_create_autocmd({ "ColorScheme", "BufEnter" }, {
 
 -- 6. REMOTE CLIPBOARD (OSC 52)
 vim.opt.clipboard = "unnamedplus"
-local function paste()
-  return { vim.fn.split(vim.fn.getreg(''), '\n'), vim.fn.getregtype('') }
+local function paste() 
+  return { vim.fn.split(vim.fn.getreg(''), '\n'), vim.fn.getregtype('') } 
 end
 vim.g.clipboard = {
   name = 'OSC 52',
@@ -263,3 +263,35 @@ cmp.setup({
 
 -- Zen Mode
 vim.keymap.set("n", "<leader>z", "<cmd>ZenMode<cr>", { noremap = true, silent = true })
+
+-- 9. CUSTOM COMMANDS
+vim.api.nvim_create_user_command('CommentBox', function(opts)
+    local args = opts.args
+    local first_space = string.find(args, " ")
+    local func_name = first_space and string.sub(args, 1, first_space - 1) or args
+    local desc = first_space and string.sub(args, first_space + 1) or ""
+
+    local max_width = 75
+    local lines = {}
+    -- Top border: "/" + "*" repeated to match the full width
+    table.insert(lines, "/" .. string.rep("*", max_width + 1))
+
+    local first_line_prefix = " * " .. func_name .. ": "
+    local indent = string.rep(" ", #first_line_prefix)
+    
+    local current_line = first_line_prefix
+    for word in desc:gmatch("%S+") do
+        if #current_line + #word + 1 > max_width then
+            table.insert(lines, current_line .. string.rep(" ", max_width - #current_line) .. " *")
+            current_line = " * " .. indent:sub(4) .. word
+        else
+            current_line = current_line .. (#current_line == #first_line_prefix and "" or " ") .. word
+        end
+    end
+    table.insert(lines, current_line .. string.rep(" ", max_width - #current_line) .. " *")
+    -- Bottom border: " " + "*" repeated + "/"
+    table.insert(lines, " " .. string.rep("*", max_width) .. "/")
+
+    local row = vim.api.nvim_win_get_cursor(0)[1]
+    vim.api.nvim_buf_set_lines(0, row - 1, row - 1, false, lines)
+end, { nargs = "+", desc = "K.N. King style comment box" })
