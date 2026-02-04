@@ -46,8 +46,8 @@ require("lazy").setup({
           },
         },
       })
-      -- Default to Light mode initially
-      vim.cmd("colorscheme github_light")
+      -- Default to Dark mode initially
+      vim.cmd("colorscheme github_dark")
     end,
   },
 
@@ -121,7 +121,7 @@ vim.opt.expandtab = true
 vim.opt.softtabstop = 4
 
 -- 4. SIMPLISTIC THEME TOGGLE (Light/Dark)
-vim.g.is_dark_mode = false -- Default to Light
+vim.g.is_dark_mode = true -- Default to Dark
 
 local function fix_cursor()
     -- Force the cursor to be visible by manually setting the highlight group
