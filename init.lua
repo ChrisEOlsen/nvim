@@ -16,6 +16,45 @@ if not vim.loop.fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
+-- 1.1 THEME STATE PERSISTENCE
+local theme_state_file = vim.fn.stdpath("data") .. "/theme_state.json"
+
+local function save_theme_state()
+    local state = {
+        is_dark_mode = vim.g.is_dark_mode,
+        is_transparent = vim.g.is_transparent
+    }
+    local json = vim.fn.json_encode(state)
+    local f = io.open(theme_state_file, "w")
+    if f then
+        f:write(json)
+        f:close()
+    end
+end
+
+local function load_theme_state()
+    local f = io.open(theme_state_file, "r")
+    if f then
+        local content = f:read("*a")
+        f:close()
+        local ok, state = pcall(vim.fn.json_decode, content)
+        if ok and state then
+            vim.g.is_dark_mode = state.is_dark_mode
+            vim.g.is_transparent = state.is_transparent
+        else
+            -- Default fallbacks if JSON invalid
+            vim.g.is_dark_mode = true
+            vim.g.is_transparent = false
+        end
+    else
+        -- Defaults if file doesn't exist
+        vim.g.is_dark_mode = true
+        vim.g.is_transparent = false
+    end
+end
+
+load_theme_state()
+
 -- 2. PLUGINS
 require("lazy").setup({
   -- The Theme: GitHub Theme (Reliable, handles cursors well)
@@ -46,8 +85,12 @@ require("lazy").setup({
           },
         },
       })
-      -- Default to Dark mode initially
-      vim.cmd("colorscheme github_dark")
+      -- Apply initial theme based on loaded state
+      if vim.g.is_dark_mode then
+          vim.cmd("colorscheme github_dark")
+      else
+          vim.cmd("colorscheme github_light")
+      end
     end,
   },
 
@@ -122,8 +165,7 @@ vim.opt.expandtab = true
 vim.opt.softtabstop = 4
 
 -- 4. SIMPLISTIC THEME TOGGLE (Light/Dark)
-vim.g.is_dark_mode = true -- Default to Dark
-vim.g.is_transparent = false -- Default to Opaque
+-- vim.g.is_dark_mode and vim.g.is_transparent are initialized in Section 1.1
 
 local function fix_cursor()
     local bg_color
@@ -196,10 +238,14 @@ local function toggle_theme()
         vim.g.is_transparent = false
         print("Theme: Dark")
     end
+    save_theme_state()
     fix_cursor() -- Apply cursor/bg fix immediately
 end
 
 vim.keymap.set("n", "<leader>tm", toggle_theme, { noremap = true, silent = true, desc = "Toggle Theme" })
+
+-- Apply initial state fixes
+fix_cursor()
 
 -- 5. MONK MODE: PLAIN TEXT WITH COMMENTS
 -- We MUST have 'syntax on' to detect comments, but we strip all other colors.
