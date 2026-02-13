@@ -110,6 +110,7 @@ vim.opt.relativenumber = true -- Relative line numbers
 vim.opt.signcolumn = "yes"    -- Keep space for error icons
 vim.opt.guicursor = "n-v-c-sm:block,i-ci-ve:ver25,r-cr-o:hor20" -- Standard cursor
 vim.opt.cursorline = true     -- Highlight the line the cursor is on
+vim.opt.fillchars:append({ eob = " " }) -- Hide end-of-buffer tildes
 
 -- Clear search highlights on <Esc>
 vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>")
@@ -122,57 +123,80 @@ vim.opt.softtabstop = 4
 
 -- 4. SIMPLISTIC THEME TOGGLE (Light/Dark)
 vim.g.is_dark_mode = true -- Default to Dark
+vim.g.is_transparent = false -- Default to Opaque
 
 local function fix_cursor()
-    -- Force the cursor to be visible by manually setting the highlight group
-    if vim.g.is_dark_mode then
-        -- DARK MODE: One Dark Background
-        local bg_color = "#282c34"
-        local fg_color = "#ffffff"
-
-        vim.api.nvim_set_hl(0, "Normal", { bg = bg_color, fg = fg_color, force = true })
-        vim.api.nvim_set_hl(0, "NormalNC", { bg = bg_color, fg = fg_color, force = true })
-        vim.api.nvim_set_hl(0, "EndOfBuffer", { bg = bg_color, fg = bg_color, force = true })
-        vim.api.nvim_set_hl(0, "SignColumn", { bg = bg_color, force = true })
-        vim.api.nvim_set_hl(0, "LineNr", { bg = bg_color, force = true })
-        vim.api.nvim_set_hl(0, "ZenBg", { bg = bg_color, force = true })
-
-        -- Cursor: White on Background
-        vim.api.nvim_set_hl(0, "Cursor", { bg = "#ffffff", fg = bg_color, force = true })
-        vim.api.nvim_set_hl(0, "TermCursor", { bg = "#ffffff", fg = bg_color, force = true })
-        -- Line highlight: Slightly lighter than background
-        vim.api.nvim_set_hl(0, "CursorLine", { bg = "#2c323c", force = true })
+    local bg_color
+    if vim.g.is_transparent then
+        bg_color = "NONE"
+    elseif vim.g.is_dark_mode then
+        bg_color = "#282c34"
     else
-        -- LIGHT MODE: Pure White
-        local bg_color = "#ffffff"
-        local fg_color = "#000000"
+        bg_color = "#ffffff"
+    end
 
-        vim.api.nvim_set_hl(0, "Normal", { bg = bg_color, fg = fg_color, force = true })
-        vim.api.nvim_set_hl(0, "NormalNC", { bg = bg_color, fg = fg_color, force = true })
-        vim.api.nvim_set_hl(0, "EndOfBuffer", { bg = bg_color, fg = bg_color, force = true })
-        vim.api.nvim_set_hl(0, "SignColumn", { bg = bg_color, force = true })
-        vim.api.nvim_set_hl(0, "LineNr", { bg = bg_color, force = true })
-        vim.api.nvim_set_hl(0, "ZenBg", { bg = bg_color, force = true })
+    local fg_color = vim.g.is_dark_mode and "#ffffff" or "#000000"
 
-        -- Cursor: Black on White
+    -- Base Colors
+    vim.api.nvim_set_hl(0, "Normal", { bg = bg_color, fg = fg_color, force = true })
+    vim.api.nvim_set_hl(0, "NormalNC", { bg = bg_color, fg = fg_color, force = true })
+    -- Hide EndOfBuffer tildes by matching bg (or invisible if transparent)
+    -- Ideally use fillchars, but keeping this logic for consistency
+    local eob_fg = (bg_color == "NONE") and "NONE" or bg_color
+    vim.api.nvim_set_hl(0, "EndOfBuffer", { bg = bg_color, fg = eob_fg, force = true })
+    
+    vim.api.nvim_set_hl(0, "SignColumn", { bg = bg_color, force = true })
+    vim.api.nvim_set_hl(0, "LineNr", { bg = bg_color, force = true })
+    vim.api.nvim_set_hl(0, "ZenBg", { bg = bg_color, force = true })
+
+    if vim.g.is_dark_mode then
+        -- DARK MODE details
+        vim.api.nvim_set_hl(0, "Cursor", { bg = "#ffffff", fg = "#282c34", force = true })
+        vim.api.nvim_set_hl(0, "TermCursor", { bg = "#ffffff", fg = "#282c34", force = true })
+        vim.api.nvim_set_hl(0, "CursorLine", { bg = "#2c323c", force = true })
+
+        -- Diagnostic Line Highlights (Dark Red/Yellow)
+        vim.api.nvim_set_hl(0, "DiagnosticLineError", { bg = "#5c2424", force = true })
+        vim.api.nvim_set_hl(0, "DiagnosticLineWarn", { bg = "#5c4e24", force = true })
+    else
+        -- LIGHT MODE details
         vim.api.nvim_set_hl(0, "Cursor", { bg = "#000000", fg = "#ffffff", force = true })
         vim.api.nvim_set_hl(0, "TermCursor", { bg = "#000000", fg = "#ffffff", force = true })
-        -- Line highlight: Subtle gray
         vim.api.nvim_set_hl(0, "CursorLine", { bg = "#f0f0f0", force = true })
+
+        -- Diagnostic Line Highlights (Light Red/Yellow)
+        vim.api.nvim_set_hl(0, "DiagnosticLineError", { bg = "#ffebe9", force = true })
+        vim.api.nvim_set_hl(0, "DiagnosticLineWarn", { bg = "#fff8c4", force = true })
     end
 end
 
 local function toggle_theme()
-    if vim.g.is_dark_mode then
+    if vim.g.is_dark_mode and not vim.g.is_transparent then
+        -- Dark -> Light
         vim.cmd("colorscheme github_light")
         vim.g.is_dark_mode = false
+        vim.g.is_transparent = false
         print("Theme: Light")
-    else
+    elseif not vim.g.is_dark_mode and not vim.g.is_transparent then
+        -- Light -> Dark Transparent
         vim.cmd("colorscheme github_dark")
         vim.g.is_dark_mode = true
+        vim.g.is_transparent = true
+        print("Theme: Dark (Transparent)")
+    elseif vim.g.is_dark_mode and vim.g.is_transparent then
+        -- Dark Transparent -> Light Transparent
+        vim.cmd("colorscheme github_light")
+        vim.g.is_dark_mode = false
+        vim.g.is_transparent = true
+        print("Theme: Light (Transparent)")
+    else
+        -- Light Transparent -> Dark Opaque
+        vim.cmd("colorscheme github_dark")
+        vim.g.is_dark_mode = true
+        vim.g.is_transparent = false
         print("Theme: Dark")
     end
-    fix_cursor() -- Apply cursor fix immediately after switching
+    fix_cursor() -- Apply cursor/bg fix immediately
 end
 
 vim.keymap.set("n", "<leader>tm", toggle_theme, { noremap = true, silent = true, desc = "Toggle Theme" })
@@ -241,6 +265,24 @@ vim.keymap.set({ "x", "o" }, "aq", function() return smart_quote(false) end, { e
 
 -- 8. LSP & CMP SETUP
 local lspconfig = require('lspconfig')
+
+-- Configure Diagnostic Signs to use Line Highlights
+local signs = { Error = "E", Warn = "W", Hint = "H", Info = "I" }
+for type, icon in pairs(signs) do
+    local hl = "DiagnosticSign" .. type
+    local line_hl = "DiagnosticLine" .. type
+    vim.fn.sign_define(hl, { text = icon, texthl = hl, linehl = line_hl, numhl = "" })
+end
+
+-- Also ensure diagnostics are enabled with virtual text
+vim.diagnostic.config({
+  virtual_text = true,
+  signs = true,
+  underline = true,
+  update_in_insert = false,
+  severity_sort = true,
+})
+
 lspconfig.clangd.setup({
   cmd = { "clangd", "--background-index" },
   on_attach = function(client, bufnr)
