@@ -276,19 +276,27 @@ vim.api.nvim_create_autocmd({ "ColorScheme", "BufEnter" }, {
     end,
 })
 
--- 6. REMOTE CLIPBOARD (OSC 52)
-vim.opt.clipboard = "unnamedplus"
-local function paste() 
-  return { vim.fn.split(vim.fn.getreg(''), '\n'), vim.fn.getregtype('') } 
+-- 6. CLIPBOARD (LOCAL & REMOTE)
+vim.opt.clipboard = "unnamedplus" -- Sync with system clipboard
+
+-- For SSH sessions, use OSC52 for remote clipboard access.
+-- This requires a modern terminal that supports the OSC52 escape code.
+if os.getenv("SSH_CLIENT") or os.getenv("SSH_TTY") then
+  vim.g.clipboard = {
+    name = "osc52",
+    copy = {
+      ["+"] = require("vim.ui.clipboard.osc52").copy("+"),
+      ["*"] = require("vim.ui.clipboard.osc52").copy("*"),
+    },
+    paste = {
+      ["+"] = require("vim.ui.clipboard.osc52").paste("+"),
+      ["*"] = require("vim.ui.clipboard.osc52").paste("*"),
+    },
+  }
 end
-vim.g.clipboard = {
-  name = 'OSC 52',
-  copy = {
-    ['+'] = require('vim.ui.clipboard.osc52').copy('+'),
-    ['*'] = require('vim.ui.clipboard.osc52').copy('*'),
-  },
-  paste = { ['+'] = paste, ['*'] = paste },
-}
+
+-- Keymap for yanking to system clipboard
+vim.keymap.set({ "n", "v" }, "<leader>y", '"+y', { desc = "Yank to system clipboard" })
 
 -- 7. SMART QUOTES
 local function smart_quote(is_inner)
