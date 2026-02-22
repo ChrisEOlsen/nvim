@@ -383,3 +383,31 @@ vim.api.nvim_create_user_command('CommentBox', function(opts)
     local row = vim.api.nvim_win_get_cursor(0)[1]
     vim.api.nvim_buf_set_lines(0, row - 1, row - 1, false, lines)
 end, { nargs = "+", desc = "K.N. King style comment box" })
+
+vim.api.nvim_create_user_command('MainArgs', function()
+    local lines = {
+        "#include <stdio.h>",
+        "#include <stdlib.h>",
+        "",
+        "int main(int argc, char *argv[])",
+        "{",
+        "    return 0;",
+        "}"
+    }
+    local row = vim.api.nvim_win_get_cursor(0)[1]
+    vim.api.nvim_buf_set_lines(0, row - 1, row - 1, false, lines)
+end, { desc = "Insert Allman style main with arguments" })
+
+vim.api.nvim_create_user_command('MainVoid', function()
+    local lines = {
+        "#include <stdio.h>",
+        "#include <stdlib.h>",
+        "",
+        "int main(void)",
+        "{",
+        "    return 0;",
+        "}"
+    }
+    local row = vim.api.nvim_win_get_cursor(0)[1]
+    vim.api.nvim_buf_set_lines(0, row - 1, row - 1, false, lines)
+end, { desc = "Insert Allman style main void" })
