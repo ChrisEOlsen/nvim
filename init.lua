@@ -411,3 +411,50 @@ vim.api.nvim_create_user_command('MainVoid', function()
     local row = vim.api.nvim_win_get_cursor(0)[1]
     vim.api.nvim_buf_set_lines(0, row - 1, row - 1, false, lines)
 end, { desc = "Insert Allman style main void" })
+
+vim.api.nvim_create_user_command('AddProto', function(opts)
+    local proto = opts.args
+    if proto == "" then
+        print("Usage: :AddProto <function_signature>")
+        return
+    end
+
+    -- Append body to end
+    local total_lines = vim.api.nvim_buf_line_count(0)
+    local body = {
+        "",
+        proto,
+        "{",
+        "}"
+    }
+    vim.api.nvim_buf_set_lines(0, total_lines, total_lines, false, body)
+
+    -- Insert prototype
+    local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+    local main_line_idx = nil
+    
+    for i, line in ipairs(lines) do
+        if line:match("^int%s+main") then
+            main_line_idx = i - 1 -- 0-based
+            break
+        end
+    end
+
+    if main_line_idx then
+        vim.api.nvim_buf_set_lines(0, main_line_idx, main_line_idx, false, { proto .. ";", "" })
+    else
+        -- Fallback: after last include or top
+        local insert_idx = 0
+        for i, line in ipairs(lines) do
+            if line:match("^#include") then
+                insert_idx = i
+            end
+        end
+        vim.api.nvim_buf_set_lines(0, insert_idx, insert_idx, false, { "", proto .. ";" })
+    end
+end, { nargs = "+", desc = "Add function prototype and body" })
+
+vim.api.nvim_create_user_command('MyCommands', function()
+    local cmds = { "MainArgs", "MainVoid", "AddProto", "CommentBox", "MyCommands" }
+    print("Custom Commands: " .. table.concat(cmds, ", "))
+end, { desc = "List custom commands defined in init.lua" })
