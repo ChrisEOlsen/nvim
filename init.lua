@@ -261,7 +261,16 @@ vim.api.nvim_create_autocmd({ "ColorScheme", "BufEnter" }, {
             "Repeat", "Operator", "Structure", "Boolean", "Number", "Float",
             "Label", "Keyword", "Exception", "Include", "Define", "Macro",
             "PreCondit", "StorageClass", "Typedef", "Tag", "SpecialChar",
-            "Delimiter", "SpecialComment", "Debug"
+            "Delimiter", "SpecialComment", "Debug",
+            -- LSP Semantic Token Groups
+            "@lsp.type.class", "@lsp.type.comment", "@lsp.type.decorator",
+            "@lsp.type.enum", "@lsp.type.enumMember", "@lsp.type.event",
+            "@lsp.type.function", "@lsp.type.interface", "@lsp.type.keyword",
+            "@lsp.type.macro", "@lsp.type.method", "@lsp.type.modifier",
+            "@lsp.type.namespace", "@lsp.type.number", "@lsp.type.operator",
+            "@lsp.type.parameter", "@lsp.type.property", "@lsp.type.regexp",
+            "@lsp.type.string", "@lsp.type.struct", "@lsp.type.type",
+            "@lsp.type.typeParameter", "@lsp.type.variable",
         }
 
         for _, group in ipairs(syntax_groups) do
