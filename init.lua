@@ -394,32 +394,59 @@ vim.api.nvim_create_user_command('CommentBox', function(opts)
 end, { nargs = "+", desc = "K.N. King style comment box" })
 
 vim.api.nvim_create_user_command('MainArgs', function()
-    local lines = {
-        "#include <stdio.h>",
-        "#include <stdlib.h>",
-        "",
-        "int main(int argc, char *argv[])",
-        "{",
-        "    return 0;",
-        "}"
-    }
+    local ext = vim.fn.expand('%:e')
+    local lines = {}
+    if ext == 'cpp' or ext == 'cc' or ext == 'cxx' then
+        lines = {
+            "#include <iostream>",
+            "#include <fstream>",
+            "",
+            "int main(int argc, char *argv[])",
+            "{",
+            "    return 0;",
+            "}"
+        }
+    else
+        lines = {
+            "#include <stdio.h>",
+            "#include <stdlib.h>",
+            "",
+            "int main(int argc, char *argv[])",
+            "{",
+            "    return 0;",
+            "}"
+        }
+    end
     local row = vim.api.nvim_win_get_cursor(0)[1]
     vim.api.nvim_buf_set_lines(0, row - 1, row - 1, false, lines)
-end, { desc = "Insert Allman style main with arguments" })
+end, { desc = "Insert Allman style main with arguments (C/C++)" })
 
 vim.api.nvim_create_user_command('MainVoid', function()
-    local lines = {
-        "#include <stdio.h>",
-        "#include <stdlib.h>",
-        "",
-        "int main(void)",
-        "{",
-        "    return 0;",
-        "}"
-    }
+    local ext = vim.fn.expand('%:e')
+    local lines = {}
+    if ext == 'cpp' or ext == 'cc' or ext == 'cxx' then
+        lines = {
+            "#include <iostream>",
+            "",
+            "int main()",
+            "{",
+            "    return 0;",
+            "}"
+        }
+    else
+        lines = {
+            "#include <stdio.h>",
+            "#include <stdlib.h>",
+            "",
+            "int main(void)",
+            "{",
+            "    return 0;",
+            "}"
+        }
+    end
     local row = vim.api.nvim_win_get_cursor(0)[1]
     vim.api.nvim_buf_set_lines(0, row - 1, row - 1, false, lines)
-end, { desc = "Insert Allman style main void" })
+end, { desc = "Insert Allman style main void (C/C++)" })
 
 vim.api.nvim_create_user_command('AddProto', function(opts)
     local proto = opts.args
@@ -463,7 +490,32 @@ vim.api.nvim_create_user_command('AddProto', function(opts)
     end
 end, { nargs = "+", desc = "Add function prototype and body" })
 
+vim.api.nvim_create_user_command('Compile', function()
+    local file = vim.fn.expand('%')
+    local file_no_ext = vim.fn.expand('%:r')
+    local ext = vim.fn.expand('%:e')
+    local compiler = ""
+
+    if ext == 'c' then
+        compiler = "gcc"
+    elseif ext == 'cpp' or ext == 'cc' or ext == 'cxx' then
+        compiler = "g++"
+    else
+        print("Not a C/C++ file")
+        return
+    end
+
+    local cmd = string.format("%s -o %s %s", compiler, file_no_ext, file)
+    print("Compiling: " .. cmd)
+    local output = vim.fn.system(cmd)
+    if vim.v.shell_error ~= 0 then
+        print("Compilation Error:\n" .. output)
+    else
+        print("Compilation Successful!")
+    end
+end, { desc = "Compile current C/C++ file" })
+
 vim.api.nvim_create_user_command('MyCommands', function()
-    local cmds = { "MainArgs", "MainVoid", "AddProto", "CommentBox", "MyCommands" }
+    local cmds = { "MainArgs", "MainVoid", "AddProto", "CommentBox", "Compile", "MyCommands" }
     print("Custom Commands: " .. table.concat(cmds, ", "))
 end, { desc = "List custom commands defined in init.lua" })
