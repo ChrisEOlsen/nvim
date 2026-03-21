@@ -23,7 +23,7 @@ local function load_ai_config()
             return state
         end
     end
-    return { model = "qwen/qwen3-coder" }
+    return { model = "qwen/qwen3-coder", provider = "Google Vertex" }
 end
 
 local function save_ai_config()
@@ -129,13 +129,17 @@ local function call_openrouter(system_prompt, user_message)
         return nil
     end
 
-    local payload = vim.fn.json_encode({
+    local request = {
         model = M.config.model,
         messages = {
             { role = "system", content = system_prompt },
             { role = "user",   content = user_message  },
         },
-    })
+    }
+    if M.config.provider and M.config.provider ~= "" then
+        request.provider = { only = { M.config.provider }, allow_fallbacks = false }
+    end
+    local payload = vim.fn.json_encode(request)
 
     local tmpfile = vim.fn.tempname()
     local f = io.open(tmpfile, "w")
@@ -279,9 +283,21 @@ vim.api.nvim_create_user_command("Explain", function(opts)
 end, { range = 2, desc = "Explain selected code using AI" })
 
 vim.api.nvim_create_user_command("Aiconfig", function(opts)
-    M.config.model = opts.args
+    -- Usage: :Aiconfig <model> [provider]
+    -- Provider is everything after the first space. Omit to keep existing provider.
+    -- Use "any" as provider to remove the restriction and let OpenRouter choose.
+    local space = opts.args:find(" ")
+    if space then
+        M.config.model    = opts.args:sub(1, space - 1)
+        local prov        = opts.args:sub(space + 1)
+        M.config.provider = (prov == "any") and nil or prov
+    else
+        M.config.model = opts.args
+    end
     save_ai_config()
-    print("AI model set to: " .. opts.args)
-end, { nargs = 1, desc = "Set the AI model (e.g. :Aiconfig qwen/qwen3-coder)" })
+    local msg = "AI model: " .. M.config.model
+    msg = msg .. " | provider: " .. (M.config.provider or "any (OpenRouter chooses)")
+    print(msg)
+end, { nargs = "+", desc = "Set AI model and optional provider (e.g. :Aiconfig qwen/qwen3-coder Google Vertex)" })
 
 return M
