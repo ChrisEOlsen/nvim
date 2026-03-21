@@ -37,4 +37,42 @@ end
 
 M.config = load_ai_config()
 
+-- --------------------------------------------------------------------------
+-- CONSTANTS: hardcoded fallback prompts (used when prompt files are missing)
+-- --------------------------------------------------------------------------
+
+local FALLBACK_PROMPTS = {
+    autogen = [[You are a code generation assistant embedded in a text editor.
+Output ONLY valid code. No explanations, no markdown fences, no commentary.
+Match the language, style, and conventions of the surrounding code exactly.
+If the context is C or C++, follow C89/C99/C++ conventions as shown in the file.]],
+    explain = [[You are a concise code explanation assistant embedded in a text editor.
+Respond in two short sections:
+1. SYNTAX: Identify the language constructs and patterns used (2-4 lines max).
+2. PURPOSE: Explain what this code does in the context of the file (3-5 lines max).
+Be direct. No preamble, no filler. Fit your entire response within 20 lines.]],
+}
+
+-- --------------------------------------------------------------------------
+-- UTILITIES
+-- --------------------------------------------------------------------------
+
+local function strip_fences(text)
+    text = text:gsub("^```[^\n]*\n", "")
+    text = text:gsub("\n```%s*$", "")
+    text = text:gsub("^```%s*$", "")
+    return text
+end
+
+local function load_prompt(name)
+    local path = vim.fn.stdpath("config") .. "/ai_prompts/" .. name .. ".txt"
+    local f = io.open(path, "r")
+    if f then
+        local content = f:read("*a")
+        f:close()
+        return content
+    end
+    return FALLBACK_PROMPTS[name] or ""
+end
+
 return M
