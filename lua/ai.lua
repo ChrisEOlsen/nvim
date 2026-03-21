@@ -223,4 +223,41 @@ local function insert_at_cursor(text)
     vim.api.nvim_win_set_cursor(0, pos)  -- restore cursor to original line
 end
 
+-- --------------------------------------------------------------------------
+-- COMMANDS
+-- --------------------------------------------------------------------------
+
+vim.api.nvim_create_user_command("Autogen", function(opts)
+    local bufnr = vim.api.nvim_get_current_buf()
+    local system_prompt = load_prompt("autogen")
+    local context = build_autogen_context(bufnr)
+    local user_message =
+        "--- CONTEXT START ---\n" .. context .. "\n--- CONTEXT END ---\n\nTask: " .. opts.args
+    local result = call_openrouter(system_prompt, user_message)
+    if result then
+        insert_at_cursor(result)
+    end
+end, { nargs = "+", desc = "Generate code at cursor using AI" })
+
+vim.api.nvim_create_user_command("Explain", function(opts)
+    local bufnr = vim.api.nvim_get_current_buf()
+    local system_prompt = load_prompt("explain")
+    local selection    = get_visual_selection(bufnr, opts.line1, opts.line2)
+    local file_context = build_explain_context(bufnr)
+    local user_message =
+        "--- FILE CONTEXT START ---\n" .. file_context ..
+        "\n--- FILE CONTEXT END ---\n\n--- SELECTED CODE ---\n" ..
+        selection .. "\n--- END SELECTED CODE ---"
+    local result = call_openrouter(system_prompt, user_message)
+    if result then
+        open_explain_window(result)
+    end
+end, { range = 2, desc = "Explain selected code using AI" })
+
+vim.api.nvim_create_user_command("Aiconfig", function(opts)
+    M.config.model = opts.args
+    save_ai_config()
+    print("AI model set to: " .. opts.args)
+end, { nargs = 1, desc = "Set the AI model (e.g. :Aiconfig qwen/qwen3-coder)" })
+
 return M
