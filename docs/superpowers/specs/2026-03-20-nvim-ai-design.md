@@ -8,13 +8,15 @@
 
 Add AI-assisted code generation and explanation to the existing Neovim configuration via a self-contained `lua/ai.lua` module. Uses OpenRouter as the API backend, curl for HTTP (blocking), and no new plugins. Three user-facing commands: `:autogen`, `:explain`, `:aiconfig`.
 
+**Minimum Neovim version:** 0.9 (required for `vim.api.nvim_set_option_value`).
+
 ---
 
 ## File Structure
 
 ```
 ~/.config/nvim/
-├── init.lua                    (existing — add one require("ai") line)
+├── init.lua                    (existing — add require("ai") and update :MyCommands)
 ├── lua/
 │   └── ai.lua                  (new — all AI logic)
 └── ai_prompts/
@@ -23,122 +25,186 @@ Add AI-assisted code generation and explanation to the existing Neovim configura
 ```
 
 Config persistence: `~/.local/share/nvim/ai_config.json`
-Matches the existing theme state JSON pattern in `init.lua`.
 
 ---
 
 ## Module: `lua/ai.lua`
 
+### Module Init
+
+Run once at top of file before any command registration:
+```lua
+vim.api.nvim_set_hl(0, "AIFloatBorder", { fg = "#FFA500" })
+```
+
 ### Config Layer
 
 - On load: reads `ai_config.json`; if absent, defaults to model `"qwen/qwen3-coder"`.
-- `save_ai_config()`: encodes config to JSON and writes to `ai_config.json`.
-- Exposes `M.config.model` for use by the API caller.
+- `save_ai_config()`: encodes config to JSON, writes `ai_config.json`; creates file if absent.
+- Exposes `M.config.model`.
 
 ### Context Builder
 
 - `build_autogen_context(bufnr)`:
-  - Reads full buffer content.
-  - Scans for `#include "..."` lines (local headers only — `<system>` headers ignored).
-  - Resolves each header path relative to the current file's directory.
-  - Reads each resolved `.h` file if it exists on disk.
-  - Returns a single concatenated string: headers first, then current file.
+  - Reads full buffer via `vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)`.
+  - Gets buffer directory: `vim.fn.fnamemodify(vim.api.nvim_buf_get_name(bufnr), ':h')`.
+  - Scans for `#include "..."` lines, reads resolved `.h` files; silently skips missing.
+  - Returns string: headers concatenated, then current file content.
+
 - `get_visual_selection(bufnr, line1, line2)`:
-  - Returns the selected lines as a string for use in `:explain`.
+  - `line1` / `line2` are the 1-based line numbers passed from `opts.line1` / `opts.line2`. Do NOT use `'<`/`'>` marks.
+  - `vim.api.nvim_buf_get_lines(bufnr, line1 - 1, line2, false)` (converts to 0-based).
+  - Returns lines joined with `"\n"`.
+
 - `build_explain_context(bufnr)`:
-  - Returns the full buffer content as a string (no header resolution).
+  - Returns `table.concat(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), "\n")`.
+
+### Fence Stripper
+
+- `strip_fences(text)`:
+  - Strips a leading ` ```[^\n]*\n` and a trailing `\n?` ` ``` ` if present.
+  - Returns cleaned text.
 
 ### API Caller
 
 - `call_openrouter(system_prompt, user_message)`:
-  - Reads `OPENROUTER_API_KEY` from env via `vim.fn.getenv("OPENROUTER_API_KEY")`.
-  - If key is absent or empty, surfaces an error notification and returns `nil`.
-  - Builds JSON payload:
-    ```json
-    {
-      "model": "<config.model>",
-      "messages": [
-        { "role": "system", "content": "<system_prompt>" },
-        { "role": "user",   "content": "<user_message>" }
-      ]
-    }
-    ```
-  - Shells out via `vim.fn.system()` using `curl`:
-    ```
-    curl -s -X POST https://openrouter.ai/api/v1/chat/completions
-         -H "Authorization: Bearer <key>"
-         -H "Content-Type: application/json"
-         -d '<payload>'
-    ```
-  - Parses response with `vim.fn.json_decode()`.
-  - Returns `response.choices[1].message.content` as a string, or `nil` on error.
-  - On error (non-zero shell exit or missing `choices`): shows `vim.notify` error.
+  1. Read `OPENROUTER_API_KEY` via `vim.fn.getenv("OPENROUTER_API_KEY")`. If absent or empty: `vim.notify` error, return `nil`.
+  2. Build JSON payload via `vim.fn.json_encode({ model=..., messages=[...] })`.
+  3. Write payload to temp file: `tmpfile = vim.fn.tempname()`, `io.open(tmpfile, "w")`.
+  4. Call curl in table form (bypasses shell):
+     ```lua
+     local raw = vim.fn.system({
+       "curl", "-s", "-X", "POST",
+       "https://openrouter.ai/api/v1/chat/completions",
+       "-H", "Authorization: Bearer " .. api_key,
+       "-H", "Content-Type: application/json",
+       "--data", "@" .. tmpfile,
+     })
+     local exit_code = vim.v.shell_error
+     vim.fn.delete(tmpfile)  -- unconditional: runs before any branching on exit_code or parse errors
+     ```
+  5. If `exit_code ~= 0`: `vim.notify` error with `raw`, return `nil`.
+  6. `pcall(vim.fn.json_decode, raw)` — on throw: `vim.notify` error, return `nil`.
+  7. Guard decoded response:
+     - `response.choices` nil or not a table → error, return `nil`
+     - `#response.choices == 0` → error, return `nil`
+     - `response.choices[1].message` nil → error, return `nil`
+     - (Lua tables from `json_decode` are 1-based; `choices[1]` is the first result)
+  8. Return `strip_fences(response.choices[1].message.content)`.
+     - `strip_fences` is called here so both `:autogen` and `:explain` paths receive clean text.
 
 ### Display Layer
 
 - `open_explain_window(text)`:
-  - Splits text into lines.
-  - Creates a scratch buffer (`nobuflisted`, `bufhidden=wipe`).
-  - Opens a centered floating window via `vim.api.nvim_open_win()`:
-    - `relative = "editor"`, centered on screen.
-    - Width: min(80, editor_width - 4). Height: min(#lines + 2, 25).
-    - `border = "rounded"`.
-  - After opening, sets the `FloatBorder` highlight group to orange (`#FFA500`) for this window only via `vim.api.nvim_win_set_option` + `winhighlight`.
-  - Sets buffer lines to the response text.
-  - Maps `q` and `<Esc>` in the float to close it.
+  - `local lines = vim.split(text, "\n")`
+  - Create scratch buffer: `nvim_create_buf(false, true)`, set `bufhidden=wipe`.
+  - Compute geometry:
+    ```lua
+    local width  = math.min(80, vim.o.columns - 4)
+    local height = math.max(3, math.min(#lines + 2, 25))
+    local row    = math.floor((vim.o.lines   - height) / 2)
+    local col    = math.floor((vim.o.columns - width)  / 2)
+    ```
+  - Open window: `nvim_open_win(buf, true, { relative="editor", row=row, col=col, width=width, height=height, border="rounded" })`
+  - Apply orange border (highlight already registered at module init):
+    ```lua
+    vim.api.nvim_set_option_value("winhighlight", "FloatBorder:AIFloatBorder", { win = win_id })
+    ```
+  - `nvim_buf_set_lines(buf, 0, -1, false, lines)`
+  - Close keymaps with `{ noremap=true, silent=true }`:
+    ```lua
+    vim.api.nvim_buf_set_keymap(buf, "n", "q",     "<cmd>close<CR>", { noremap=true, silent=true })
+    vim.api.nvim_buf_set_keymap(buf, "n", "<Esc>", "<cmd>close<CR>", { noremap=true, silent=true })
+    ```
 
 - `insert_at_cursor(text)`:
-  - Splits text into lines.
-  - Gets current cursor row.
-  - Inserts lines at cursor position via `vim.api.nvim_buf_set_lines()`.
+  - `local lines = vim.split(text, "\n")`
+  - `local pos = vim.api.nvim_win_get_cursor(0)` — `pos[1]` is the 1-based cursor row.
+  - Insert after cursor line:
+    ```lua
+    -- pos[1] is 1-based. nvim_buf_set_lines is 0-based.
+    -- To insert AFTER 1-based row N, pass 0-based index N (== pos[1]) as both start and end.
+    -- Example: cursor at line 1 (1-based) → insert at 0-based index 1 → after the first line. Correct.
+    -- strict_indexing=false clamps out-of-range indices, handling empty buffers safely.
+    vim.api.nvim_buf_set_lines(0, pos[1], pos[1], false, lines)
+    ```
+  - Restore cursor: `vim.api.nvim_win_set_cursor(0, pos)`.
 
 ### System Prompt Loader
 
 - `load_prompt(name)`:
-  - Reads `~/.config/nvim/ai_prompts/<name>.txt`.
-  - Returns content as string, or a sensible hardcoded fallback if file is missing.
+  - Path: `vim.fn.stdpath("config") .. "/ai_prompts/" .. name .. ".txt"`.
+  - Returns file content on success.
+  - On failure: returns the hardcoded fallback string for that prompt name (constants defined at top of `ai.lua`; text identical to the default file contents documented in the System Prompts section below).
+
+---
+
+## Message Templates
+
+### `:autogen` user message
+```
+--- CONTEXT START ---
+<output of build_autogen_context(bufnr)>
+--- CONTEXT END ---
+
+Task: <opts.args>
+```
+
+### `:explain` user message
+```
+--- FILE CONTEXT START ---
+<output of build_explain_context(bufnr)>
+--- FILE CONTEXT END ---
+
+--- SELECTED CODE ---
+<output of get_visual_selection(bufnr, opts.line1, opts.line2)>
+--- END SELECTED CODE ---
+```
 
 ---
 
 ## Commands
 
+All callbacks: `bufnr = vim.api.nvim_get_current_buf()` at invocation time.
+
 ### `:autogen <prompt>`
-
-- Mode: Normal
-- Definition: `vim.api.nvim_create_user_command('autogen', ...)`
+- `{ nargs = "+" }`
+- No args → Neovim built-in `E471`. Acceptable.
 - Flow:
-  1. Load `ai_prompts/autogen.txt` as system prompt.
-  2. Build context string via `build_autogen_context()`.
-  3. Construct user message: context block + user's prompt argument.
-  4. Call `call_openrouter(system_prompt, user_message)`.
-  5. Insert result at cursor via `insert_at_cursor()`.
+  1. `bufnr = nvim_get_current_buf()`
+  2. `system_prompt = load_prompt("autogen")`
+  3. `context = build_autogen_context(bufnr)`
+  4. Construct user message from autogen template.
+  5. `result = call_openrouter(system_prompt, user_message)`
+  6. If `result` is non-nil: `insert_at_cursor(result)`.
 
-### `:explain` (visual range)
-
-- Mode: Visual (defined with `range = true`)
-- Definition: `vim.api.nvim_create_user_command('explain', ..., { range = true })`
+### `:explain`
+- `{ range = 2 }`
+- Visual mode: `opts.line1` / `opts.line2` span the selection.
+- Normal mode (no explicit range): `opts.line1 == opts.line2 == current line`. Explains one line. Intentional and acceptable.
 - Flow:
-  1. Load `ai_prompts/explain.txt` as system prompt.
-  2. Capture selected lines via `get_visual_selection(bufnr, line1, line2)`.
-  3. Build full file context via `build_explain_context()`.
-  4. Construct user message: selected code block + full file context.
-  5. Call `call_openrouter(system_prompt, user_message)`.
-  6. Display result via `open_explain_window()`.
+  1. `bufnr = nvim_get_current_buf()`
+  2. `system_prompt = load_prompt("explain")`
+  3. `selection = get_visual_selection(bufnr, opts.line1, opts.line2)`
+  4. `file_context = build_explain_context(bufnr)`
+  5. Construct user message from explain template.
+  6. `result = call_openrouter(system_prompt, user_message)`
+  7. If `result` is non-nil: `open_explain_window(result)`.
 
 ### `:aiconfig <model>`
-
-- Mode: Normal
-- Definition: `vim.api.nvim_create_user_command('aiconfig', ..., { nargs = 1 })`
+- `{ nargs = 1 }`
 - Flow:
-  1. Update `M.config.model` with the argument.
-  2. Call `save_ai_config()`.
-  3. Print `"AI model set to: <model>"`.
+  1. `M.config.model = opts.args`
+  2. `save_ai_config()`
+  3. `print("AI model set to: " .. opts.args)`
 
 ---
 
 ## System Prompts
 
-### `ai_prompts/autogen.txt` (default content)
+The following text is used both as the default file content AND as the hardcoded fallback in `load_prompt`.
+
+### `ai_prompts/autogen.txt`
 ```
 You are a code generation assistant embedded in a text editor.
 Output ONLY valid code. No explanations, no markdown fences, no commentary.
@@ -146,7 +212,7 @@ Match the language, style, and conventions of the surrounding code exactly.
 If the context is C or C++, follow C89/C99/C++ conventions as shown in the file.
 ```
 
-### `ai_prompts/explain.txt` (default content)
+### `ai_prompts/explain.txt`
 ```
 You are a concise code explanation assistant embedded in a text editor.
 Respond in two short sections:
@@ -160,24 +226,26 @@ Be direct. No preamble, no filler. Fit your entire response within 20 lines.
 ## Config Persistence
 
 File: `~/.local/share/nvim/ai_config.json`
-
-Schema:
-```json
-{ "model": "qwen/qwen3-coder" }
-```
-
-Pattern mirrors the existing `theme_state.json` in `init.lua`: read at module load, written on change.
+Schema: `{ "model": "qwen/qwen3-coder" }`
+Read at load. Written on `:aiconfig`. Created on first write if absent.
 
 ---
 
 ## Integration with `init.lua`
 
-Add a single line at the end of `init.lua`:
+**1.** Add at end of `init.lua`:
 ```lua
 require("ai")
 ```
 
-Also update the `:MyCommands` listing to include `autogen`, `explain`, `aiconfig`.
+**2.** Update `:MyCommands` at line 519 of `init.lua`. Change:
+```lua
+local cmds = { "MainArgs", "MainVoid", "AddProto", "CommentBox", "Compile", "MyCommands" }
+```
+To:
+```lua
+local cmds = { "MainArgs", "MainVoid", "AddProto", "CommentBox", "Compile", "MyCommands", "autogen", "explain", "aiconfig" }
+```
 
 ---
 
@@ -185,9 +253,14 @@ Also update the `:MyCommands` listing to include `autogen`, `explain`, `aiconfig
 
 | Scenario | Behaviour |
 |---|---|
-| `OPENROUTER_API_KEY` not set | `vim.notify` error, abort |
-| curl fails (network/timeout) | `vim.notify` error with shell output |
-| JSON parse fails | `vim.notify` error, abort |
-| Header file not found | Silently skip that include |
-| `ai_config.json` missing | Use defaults, create on first `:aiconfig` |
-| Prompt file missing | Use hardcoded fallback prompt |
+| API key not set or empty | `vim.notify` error, abort |
+| curl fails (non-zero exit) | `vim.notify` error + output, abort; temp file already deleted |
+| `json_decode` throws | `vim.notify` error via `pcall`, abort |
+| `choices` nil / empty / malformed | `vim.notify` error, abort |
+| LLM returns markdown fences | `strip_fences()` called in `call_openrouter` before return — covers both commands |
+| Temp file write fails | `io.open` returns nil; `vim.notify` error, abort before curl |
+| Header `.h` file not found | Silently skip |
+| `ai_config.json` missing | Use defaults; created on first `:aiconfig` |
+| Prompt file missing | Use hardcoded fallback string |
+| `:autogen` called with no args | Neovim built-in `E471` |
+| `:explain` from normal mode | Explains current line only |
