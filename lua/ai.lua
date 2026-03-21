@@ -234,9 +234,21 @@ local function insert_at_cursor(text)
     -- nvim_buf_set_lines is 0-based. To insert AFTER 1-based row N,
     -- pass 0-based index N (== pos[1]) as both start and end.
     -- strict_indexing=false clamps for empty buffers.
-    local pos = vim.api.nvim_win_get_cursor(0)
-    vim.api.nvim_buf_set_lines(0, pos[1], pos[1], false, lines)
-    vim.api.nvim_win_set_cursor(0, pos)  -- restore cursor to original line
+    local pos  = vim.api.nvim_win_get_cursor(0)
+    local base = pos[1]  -- 0-based insert index after cursor line
+
+    -- Animate: insert one line at a time with a short delay between each.
+    -- vim.defer_fn runs in the main event loop so Neovim redraws between steps.
+    local function step(idx)
+        if idx > #lines then
+            vim.api.nvim_win_set_cursor(0, pos)  -- restore cursor to original line
+            return
+        end
+        vim.api.nvim_buf_set_lines(0, base + idx - 1, base + idx - 1, false, { lines[idx] })
+        vim.defer_fn(function() step(idx + 1) end, 18)  -- 18ms per line
+    end
+
+    step(1)
 end
 
 -- --------------------------------------------------------------------------
