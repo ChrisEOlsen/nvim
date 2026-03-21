@@ -75,4 +75,47 @@ local function load_prompt(name)
     return FALLBACK_PROMPTS[name] or ""
 end
 
+-- --------------------------------------------------------------------------
+-- CONTEXT BUILDERS
+-- --------------------------------------------------------------------------
+
+local function build_autogen_context(bufnr)
+    local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+    local buf_path = vim.api.nvim_buf_get_name(bufnr)
+    local dir = vim.fn.fnamemodify(buf_path, ":h")
+
+    local headers = {}
+    for _, line in ipairs(lines) do
+        local header_name = line:match('^#include%s*"([^"]+)"')
+        if header_name then
+            local header_path = dir .. "/" .. header_name
+            local f = io.open(header_path, "r")
+            if f then
+                local content = f:read("*a")
+                f:close()
+                table.insert(headers, "// --- " .. header_name .. " ---\n" .. content)
+            end
+            -- silently skip if file not found
+        end
+    end
+
+    local file_content = table.concat(lines, "\n")
+    if #headers > 0 then
+        return table.concat(headers, "\n") .. "\n// --- current file ---\n" .. file_content
+    end
+    return file_content
+end
+
+local function get_visual_selection(bufnr, line1, line2)
+    -- line1/line2 are 1-based (from opts.line1/opts.line2)
+    -- nvim_buf_get_lines is 0-based: subtract 1 from start, end is exclusive so line2 is correct
+    local lines = vim.api.nvim_buf_get_lines(bufnr, line1 - 1, line2, false)
+    return table.concat(lines, "\n")
+end
+
+local function build_explain_context(bufnr)
+    local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+    return table.concat(lines, "\n")
+end
+
 return M
