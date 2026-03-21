@@ -123,7 +123,7 @@ end
 -- --------------------------------------------------------------------------
 
 local function call_openrouter(system_prompt, user_message)
-    local api_key = vim.fn.getenv("OPENROUTER_API_KEY")
+    local api_key = os.getenv("OPENROUTER_API_KEY")
     if not api_key or api_key == "" then
         vim.notify("AI: OPENROUTER_API_KEY is not set", vim.log.levels.ERROR)
         return nil
@@ -238,6 +238,9 @@ vim.api.nvim_create_user_command("Autogen", function(opts)
         insert_at_cursor(result)
     end
 end, { nargs = "+", desc = "Generate code at cursor using AI" })
+
+-- Visual mode shortcut: select code, press <leader>ai to explain
+vim.keymap.set("v", "<leader>ai", ":'<,'>Explain<CR>", { noremap = true, silent = true, desc = "Explain selection" })
 
 vim.api.nvim_create_user_command("Explain", function(opts)
     local bufnr = vim.api.nvim_get_current_buf()
