@@ -172,7 +172,16 @@ local function call_openrouter(system_prompt, user_message)
     end
 
     if type(response.choices) ~= "table" or #response.choices == 0 then
-        vim.notify("AI: no choices in API response", vim.log.levels.ERROR)
+        -- Surface whatever OpenRouter sent back (error message, rate limit info, etc.)
+        local detail = ""
+        if type(response.error) == "table" then
+            detail = "\n" .. (response.error.message or vim.fn.json_encode(response.error))
+        elseif type(response.error) == "string" then
+            detail = "\n" .. response.error
+        else
+            detail = "\nRaw: " .. raw
+        end
+        vim.notify("AI: no choices in API response" .. detail, vim.log.levels.ERROR)
         return nil
     end
 
