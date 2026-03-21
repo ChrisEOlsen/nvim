@@ -185,15 +185,26 @@ end
 -- --------------------------------------------------------------------------
 
 local function open_explain_window(text)
-    local lines = vim.split(text, "\n")
+    -- Strip trailing blank line that some models append
+    local lines = vim.split(text:gsub("\n+$", ""), "\n")
+
+    -- Width: 60% of screen, capped at 90, minimum 50
+    local width = math.max(50, math.min(90, math.floor(vim.o.columns * 0.60)))
+
+    -- Calculate visual height accounting for word wrap at content_width
+    local content_width = width - 2  -- subtract border columns
+    local visual_lines = 0
+    for _, line in ipairs(lines) do
+        visual_lines = visual_lines + math.max(1, math.ceil(#line / content_width))
+    end
+    local height = math.max(3, math.min(visual_lines + 2, vim.o.lines - 4))
+
+    -- Left-aligned with a small margin, vertically centred
+    local col = 2
+    local row = math.floor((vim.o.lines - height) / 2)
 
     local buf = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buf })
-
-    local width  = math.min(80, vim.o.columns - 4)
-    local height = math.max(3, math.min(#lines + 2, vim.o.lines - 4))
-    local row    = math.floor((vim.o.lines   - height) / 2)
-    local col    = math.floor((vim.o.columns - width)  / 2)
 
     local win = vim.api.nvim_open_win(buf, true, {
         relative = "editor",
@@ -202,8 +213,9 @@ local function open_explain_window(text)
         border = "rounded",
     })
 
-    -- Apply orange border (AIFloatBorder registered at module load)
     vim.api.nvim_set_option_value("winhighlight", "FloatBorder:AIFloatBorder", { win = win })
+    vim.api.nvim_set_option_value("wrap",      true, { win = win })
+    vim.api.nvim_set_option_value("linebreak", true, { win = win })  -- break at word boundaries
 
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
     vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
