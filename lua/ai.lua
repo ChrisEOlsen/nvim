@@ -271,10 +271,16 @@ end, { nargs = "+", desc = "Generate code at cursor using AI" })
 vim.keymap.set("n", "<leader>ag", function()
     vim.ui.input({ prompt = "Autogen: " }, function(input)
         if input and input ~= "" then
-            -- vim.schedule defers execution to the main event loop, preventing
-            -- vim.notify errors from propagating back through the ui.input callback
+            -- Call Lua functions directly — avoids vim.cmd/nvim_exec2 which
+            -- converts vim.notify ERROR into a Vim exception that crashes the callback
             vim.schedule(function()
-                vim.cmd("Autogen " .. input)
+                local bufnr       = vim.api.nvim_get_current_buf()
+                local sys_prompt  = load_prompt("autogen")
+                local context     = build_autogen_context(bufnr)
+                local user_msg    =
+                    "--- CONTEXT START ---\n" .. context .. "\n--- CONTEXT END ---\n\nTask: " .. input
+                local result = call_openrouter(sys_prompt, user_msg)
+                if result then insert_at_cursor(result) end
             end)
         end
     end)
