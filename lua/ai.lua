@@ -205,11 +205,17 @@ local function open_explain_window(text)
     -- Strip trailing blank line that some models append
     local lines = vim.split(text:gsub("\n+$", ""), "\n")
 
+    -- Add one space of left padding to each line for breathing room
+    local padded = {}
+    for _, line in ipairs(lines) do
+        table.insert(padded, " " .. line)
+    end
+
     -- Width: 60% of screen, capped at 90, minimum 50
     local width = math.max(50, math.min(90, math.floor(vim.o.columns * 0.60)))
 
-    -- Calculate visual height accounting for word wrap at content_width
-    local content_width = width - 2  -- subtract border columns
+    -- Calculate visual height accounting for word wrap
+    local content_width = width - 4  -- border + padding
     local visual_lines = 0
     for _, line in ipairs(lines) do
         visual_lines = visual_lines + math.max(1, math.ceil(#line / content_width))
@@ -228,13 +234,25 @@ local function open_explain_window(text)
         row = row, col = col,
         width = width, height = height,
         border = "rounded",
+        title = " explain ",
+        title_pos = "left",
     })
 
-    vim.api.nvim_set_option_value("winhighlight", "FloatBorder:AIFloatBorder", { win = win })
-    vim.api.nvim_set_option_value("wrap",      true, { win = win })
-    vim.api.nvim_set_option_value("linebreak", true, { win = win })  -- break at word boundaries
+    -- Orange border + title, no clutter
+    vim.api.nvim_set_option_value(
+        "winhighlight",
+        "FloatBorder:AIFloatBorder,FloatTitle:AIFloatBorder,Normal:Normal",
+        { win = win }
+    )
+    vim.api.nvim_set_option_value("wrap",           true,  { win = win })
+    vim.api.nvim_set_option_value("linebreak",      true,  { win = win })
+    vim.api.nvim_set_option_value("number",         false, { win = win })
+    vim.api.nvim_set_option_value("relativenumber", false, { win = win })
+    vim.api.nvim_set_option_value("signcolumn",     "no",  { win = win })
+    vim.api.nvim_set_option_value("cursorline",     false, { win = win })
+    vim.api.nvim_set_option_value("fillchars",      "eob: ", { win = win })
 
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, padded)
     vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
 
     vim.api.nvim_buf_set_keymap(buf, "n", "q",     "<cmd>close<CR>", { noremap = true, silent = true })
