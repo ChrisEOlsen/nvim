@@ -258,7 +258,7 @@ local function insert_at_cursor(text)
             return
         end
         vim.api.nvim_buf_set_lines(0, base + idx - 1, base + idx - 1, false, { lines[idx] })
-        vim.defer_fn(function() step(idx + 1) end, 18)  -- 18ms per line
+        vim.defer_fn(function() step(idx + 1) end, 35)  -- 35ms per line
     end
 
     step(1)
@@ -287,12 +287,15 @@ vim.keymap.set("n", "<leader>ag", function()
             -- Call Lua functions directly — avoids vim.cmd/nvim_exec2 which
             -- converts vim.notify ERROR into a Vim exception that crashes the callback
             vim.schedule(function()
+                vim.api.nvim_echo({{"  AI: thinking ", "Comment"}, {"▓▓▓▓▓▓▓▓▓▓▓▓", "Comment"}}, false, {})
+                vim.cmd("redraw")
                 local bufnr       = vim.api.nvim_get_current_buf()
                 local sys_prompt  = load_prompt("autogen")
                 local context     = build_autogen_context(bufnr)
                 local user_msg    =
                     "--- CONTEXT START ---\n" .. context .. "\n--- CONTEXT END ---\n\nTask: " .. input
                 local result = call_openrouter(sys_prompt, user_msg)
+                vim.api.nvim_echo({{"", ""}}, false, {})  -- clear loading bar
                 if result then insert_at_cursor(result) end
             end)
         end
@@ -300,7 +303,27 @@ vim.keymap.set("n", "<leader>ag", function()
 end, { noremap = true, silent = true, desc = "AI generate code at cursor" })
 
 -- Visual mode shortcut: select code, press <leader>ai to explain
-vim.keymap.set("v", "<leader>ai", ":'<,'>Explain<CR>", { noremap = true, silent = true, desc = "Explain selection" })
+vim.keymap.set("v", "<leader>ai", function()
+    -- Capture range before leaving visual mode
+    local line1 = vim.fn.line("'<")
+    local line2 = vim.fn.line("'>")
+    local bufnr = vim.api.nvim_get_current_buf()
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
+    vim.schedule(function()
+        vim.api.nvim_echo({{"  AI: thinking ", "Comment"}, {"▓▓▓▓▓▓▓▓▓▓▓▓", "Comment"}}, false, {})
+        vim.cmd("redraw")
+        local sys_prompt   = load_prompt("explain")
+        local selection    = get_visual_selection(bufnr, line1, line2)
+        local file_context = build_explain_context(bufnr)
+        local user_msg     =
+            "--- FILE CONTEXT START ---\n" .. file_context ..
+            "\n--- FILE CONTEXT END ---\n\n--- SELECTED CODE ---\n" ..
+            selection .. "\n--- END SELECTED CODE ---"
+        local result = call_openrouter(sys_prompt, user_msg)
+        vim.api.nvim_echo({{"", ""}}, false, {})  -- clear loading bar
+        if result then open_explain_window(result) end
+    end)
+end, { noremap = true, silent = true, desc = "Explain selection" })
 
 vim.api.nvim_create_user_command("Explain", function(opts)
     local bufnr = vim.api.nvim_get_current_buf()
