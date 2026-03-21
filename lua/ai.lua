@@ -23,7 +23,7 @@ local function load_ai_config()
             return state
         end
     end
-    return { model = "qwen/qwen3-coder", provider = "Google Vertex" }
+    return { model = "qwen/qwen3-coder" }
 end
 
 local function save_ai_config()
@@ -136,8 +136,12 @@ local function call_openrouter(system_prompt, user_message)
             { role = "user",   content = user_message  },
         },
     }
+    -- Always deny providers that use data for training.
+    -- If a specific provider is pinned in config, restrict to that one only.
+    request.provider = { data_collection = "deny", allow_fallbacks = true }
     if M.config.provider and M.config.provider ~= "" then
-        request.provider = { only = { M.config.provider }, allow_fallbacks = false }
+        request.provider.only = { M.config.provider }
+        request.provider.allow_fallbacks = false
     end
     local payload = vim.fn.json_encode(request)
 
