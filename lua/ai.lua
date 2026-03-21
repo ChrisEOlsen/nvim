@@ -271,7 +271,11 @@ end, { nargs = "+", desc = "Generate code at cursor using AI" })
 vim.keymap.set("n", "<leader>ag", function()
     vim.ui.input({ prompt = "Autogen: " }, function(input)
         if input and input ~= "" then
-            vim.cmd("Autogen " .. input)
+            -- vim.schedule defers execution to the main event loop, preventing
+            -- vim.notify errors from propagating back through the ui.input callback
+            vim.schedule(function()
+                vim.cmd("Autogen " .. input)
+            end)
         end
     end)
 end, { noremap = true, silent = true, desc = "AI generate code at cursor" })
