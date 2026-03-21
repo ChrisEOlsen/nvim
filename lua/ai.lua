@@ -180,4 +180,47 @@ local function call_openrouter(system_prompt, user_message)
     return strip_fences(response.choices[1].message.content)
 end
 
+-- --------------------------------------------------------------------------
+-- DISPLAY LAYER
+-- --------------------------------------------------------------------------
+
+local function open_explain_window(text)
+    local lines = vim.split(text, "\n")
+
+    local buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buf })
+
+    local width  = math.min(80, vim.o.columns - 4)
+    local height = math.max(3, math.min(#lines + 2, 25))
+    local row    = math.floor((vim.o.lines   - height) / 2)
+    local col    = math.floor((vim.o.columns - width)  / 2)
+
+    local win = vim.api.nvim_open_win(buf, true, {
+        relative = "editor",
+        row = row, col = col,
+        width = width, height = height,
+        border = "rounded",
+    })
+
+    -- Apply orange border (AIFloatBorder registered at module load)
+    vim.api.nvim_set_option_value("winhighlight", "FloatBorder:AIFloatBorder", { win = win })
+
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+    vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
+
+    vim.api.nvim_buf_set_keymap(buf, "n", "q",     "<cmd>close<CR>", { noremap = true, silent = true })
+    vim.api.nvim_buf_set_keymap(buf, "n", "<Esc>", "<cmd>close<CR>", { noremap = true, silent = true })
+end
+
+local function insert_at_cursor(text)
+    local lines = vim.split(text, "\n")
+    -- pos[1] is the 1-based cursor row.
+    -- nvim_buf_set_lines is 0-based. To insert AFTER 1-based row N,
+    -- pass 0-based index N (== pos[1]) as both start and end.
+    -- strict_indexing=false clamps for empty buffers.
+    local pos = vim.api.nvim_win_get_cursor(0)
+    vim.api.nvim_buf_set_lines(0, pos[1], pos[1], false, lines)
+    vim.api.nvim_win_set_cursor(0, pos)  -- restore cursor to original line
+end
+
 return M
