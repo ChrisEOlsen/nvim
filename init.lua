@@ -516,6 +516,9 @@ vim.api.nvim_create_user_command('Compile', function()
 end, { desc = "Compile current C/C++ file" })
 
 vim.api.nvim_create_user_command('MyCommands', function()
-    local cmds = { "MainArgs", "MainVoid", "AddProto", "CommentBox", "Compile", "MyCommands" }
+    local cmds = { "MainArgs", "MainVoid", "AddProto", "CommentBox", "Compile", "MyCommands", "Autogen", "Explain", "Aiconfig" }
     print("Custom Commands: " .. table.concat(cmds, ", "))
 end, { desc = "List custom commands defined in init.lua" })
+
+-- 10. AI INTEGRATION
+require("ai")
