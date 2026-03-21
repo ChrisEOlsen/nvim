@@ -118,4 +118,66 @@ local function build_explain_context(bufnr)
     return table.concat(lines, "\n")
 end
 
+-- --------------------------------------------------------------------------
+-- API CALLER
+-- --------------------------------------------------------------------------
+
+local function call_openrouter(system_prompt, user_message)
+    local api_key = vim.fn.getenv("OPENROUTER_API_KEY")
+    if not api_key or api_key == "" then
+        vim.notify("AI: OPENROUTER_API_KEY is not set", vim.log.levels.ERROR)
+        return nil
+    end
+
+    local payload = vim.fn.json_encode({
+        model = M.config.model,
+        messages = {
+            { role = "system", content = system_prompt },
+            { role = "user",   content = user_message  },
+        },
+    })
+
+    local tmpfile = vim.fn.tempname()
+    local f = io.open(tmpfile, "w")
+    if not f then
+        vim.notify("AI: could not create temp file", vim.log.levels.ERROR)
+        return nil
+    end
+    f:write(payload)
+    f:close()
+
+    local raw = vim.fn.system({
+        "curl", "-s", "-X", "POST",
+        "https://openrouter.ai/api/v1/chat/completions",
+        "-H", "Authorization: Bearer " .. api_key,
+        "-H", "Content-Type: application/json",
+        "--data", "@" .. tmpfile,
+    })
+    local exit_code = vim.v.shell_error
+    vim.fn.delete(tmpfile)  -- unconditional: always runs before any branching
+
+    if exit_code ~= 0 then
+        vim.notify("AI: curl failed:\n" .. raw, vim.log.levels.ERROR)
+        return nil
+    end
+
+    local ok, response = pcall(vim.fn.json_decode, raw)
+    if not ok then
+        vim.notify("AI: failed to parse API response: " .. tostring(response), vim.log.levels.ERROR)
+        return nil
+    end
+
+    if type(response.choices) ~= "table" or #response.choices == 0 then
+        vim.notify("AI: no choices in API response", vim.log.levels.ERROR)
+        return nil
+    end
+
+    if not response.choices[1].message then
+        vim.notify("AI: malformed choice in API response", vim.log.levels.ERROR)
+        return nil
+    end
+
+    return strip_fences(response.choices[1].message.content)
+end
+
 return M
