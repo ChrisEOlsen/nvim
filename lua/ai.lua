@@ -191,7 +191,7 @@ local function open_explain_window(text)
     vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buf })
 
     local width  = math.min(80, vim.o.columns - 4)
-    local height = math.max(3, math.min(#lines + 2, 25))
+    local height = math.max(3, math.min(#lines + 2, vim.o.lines - 4))
     local row    = math.floor((vim.o.lines   - height) / 2)
     local col    = math.floor((vim.o.columns - width)  / 2)
 
@@ -238,6 +238,15 @@ vim.api.nvim_create_user_command("Autogen", function(opts)
         insert_at_cursor(result)
     end
 end, { nargs = "+", desc = "Generate code at cursor using AI" })
+
+-- Normal mode shortcut: <leader>ag prompts for input then runs :Autogen
+vim.keymap.set("n", "<leader>ag", function()
+    vim.ui.input({ prompt = "Autogen: " }, function(input)
+        if input and input ~= "" then
+            vim.cmd("Autogen " .. input)
+        end
+    end)
+end, { noremap = true, silent = true, desc = "AI generate code at cursor" })
 
 -- Visual mode shortcut: select code, press <leader>ai to explain
 vim.keymap.set("v", "<leader>ai", ":'<,'>Explain<CR>", { noremap = true, silent = true, desc = "Explain selection" })
