@@ -268,18 +268,9 @@ local function insert_at_cursor(text)
     local pos  = vim.api.nvim_win_get_cursor(0)
     local base = pos[1]  -- 0-based insert index after cursor line
 
-    -- Animate: insert one line at a time with a short delay between each.
-    -- vim.defer_fn runs in the main event loop so Neovim redraws between steps.
-    local function step(idx)
-        if idx > #lines then
-            vim.api.nvim_win_set_cursor(0, pos)  -- restore cursor to original line
-            return
-        end
-        vim.api.nvim_buf_set_lines(0, base + idx - 1, base + idx - 1, false, { lines[idx] })
-        vim.defer_fn(function() step(idx + 1) end, 35)  -- 35ms per line
-    end
-
-    step(1)
+    -- Insert all lines at once so the entire block is one undoable action.
+    vim.api.nvim_buf_set_lines(0, base, base, false, lines)
+    vim.api.nvim_win_set_cursor(0, pos)
 end
 
 -- --------------------------------------------------------------------------
