@@ -45,7 +45,8 @@ local FALLBACK_PROMPTS = {
     autogen = [[You are a code generation assistant embedded in a text editor.
 Output ONLY valid code. No explanations, no markdown fences, no commentary.
 Match the language, style, and conventions of the surrounding code exactly.
-If the context is C or C++, follow C89/C99/C++ conventions as shown in the file.]],
+If the context is C or C++, follow C89/C99/C++ conventions as shown in the file.
+The user message includes "Cursor is at line N." — any positional references in the task (e.g. "above", "below", "here") refer to that location in the file.]],
     explain = [[You are a concise code explanation assistant embedded in a text editor.
 Respond in two short sections:
 1. SYNTAX: Identify the language constructs and patterns used (2-4 lines max).
@@ -279,10 +280,12 @@ end
 
 vim.api.nvim_create_user_command("Autogen", function(opts)
     local bufnr = vim.api.nvim_get_current_buf()
+    local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
     local system_prompt = load_prompt("autogen")
     local context = build_autogen_context(bufnr)
     local user_message =
-        "--- CONTEXT START ---\n" .. context .. "\n--- CONTEXT END ---\n\nTask: " .. opts.args
+        "--- CONTEXT START ---\n" .. context .. "\n--- CONTEXT END ---\n\n" ..
+        "Cursor is at line " .. cursor_line .. ".\n\nTask: " .. opts.args
     local result = call_openrouter(system_prompt, user_message)
     if result then
         insert_at_cursor(result)
@@ -295,6 +298,7 @@ vim.keymap.set("n", "<leader>ag", function()
         if input and input ~= "" then
             -- Call Lua functions directly — avoids vim.cmd/nvim_exec2 which
             -- converts vim.notify ERROR into a Vim exception that crashes the callback
+            local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
             vim.schedule(function()
                 vim.api.nvim_echo({{"  AI: thinking ", "Comment"}, {"▓▓▓▓▓▓▓▓▓▓▓▓", "Comment"}}, false, {})
                 vim.cmd("redraw")
@@ -302,7 +306,8 @@ vim.keymap.set("n", "<leader>ag", function()
                 local sys_prompt  = load_prompt("autogen")
                 local context     = build_autogen_context(bufnr)
                 local user_msg    =
-                    "--- CONTEXT START ---\n" .. context .. "\n--- CONTEXT END ---\n\nTask: " .. input
+                    "--- CONTEXT START ---\n" .. context .. "\n--- CONTEXT END ---\n\n" ..
+                    "Cursor is at line " .. cursor_line .. ".\n\nTask: " .. input
                 local result = call_openrouter(sys_prompt, user_msg)
                 vim.api.nvim_echo({{"", ""}}, false, {})  -- clear loading bar
                 if result then insert_at_cursor(result) end
