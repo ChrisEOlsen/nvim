@@ -46,6 +46,8 @@ local FALLBACK_PROMPTS = {
 Output ONLY valid code. No explanations, no markdown fences, no commentary.
 Match the language, style, and conventions of the surrounding code exactly.
 If the context is C or C++, follow C89/C99/C++ conventions as shown in the file.
+Always use Allman style braces (opening brace on its own line).
+Omit braces for single-statement bodies (if, else, for, while, etc.) — put the statement on the next line, indented, with no braces.
 The user message includes "Cursor is at line N." — any positional references in the task (e.g. "above", "below", "here") refer to that location in the file.]],
     explain = [[You are a concise code explanation assistant embedded in a text editor.
 Respond in two short sections:
