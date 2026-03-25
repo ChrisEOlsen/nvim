@@ -490,7 +490,7 @@ vim.api.nvim_create_user_command('AddProto', function(opts)
     end
 end, { nargs = "+", desc = "Add function prototype and body" })
 
-vim.api.nvim_create_user_command('Compile', function()
+local function compile_file(extra_flags)
     local file = vim.fn.expand('%')
     local file_no_ext = vim.fn.expand('%:r')
     local ext = vim.fn.expand('%:e')
@@ -505,7 +505,8 @@ vim.api.nvim_create_user_command('Compile', function()
         return
     end
 
-    local cmd = string.format("%s -o %s %s", compiler, file_no_ext, file)
+    local flags = extra_flags or ""
+    local cmd = string.format("%s %s -o %s %s", compiler, flags, file_no_ext, file)
     print("Compiling: " .. cmd)
     local output = vim.fn.system(cmd)
     if vim.v.shell_error ~= 0 then
@@ -513,8 +514,17 @@ vim.api.nvim_create_user_command('Compile', function()
     else
         print("Compilation Successful!")
     end
-end, { desc = "Compile current C/C++ file" })
-vim.keymap.set("n", "<leader>cc", "<cmd>Compile<CR>", { noremap = true, silent = true, desc = "Compile current file" })
+end
+
+vim.api.nvim_create_user_command('Compile',      function() compile_file()           end, { desc = "Compile current C/C++ file" })
+vim.api.nvim_create_user_command('CompileO2',    function() compile_file("-O2")      end, { desc = "Compile with -O2 optimization" })
+vim.api.nvim_create_user_command('CompileO3',    function() compile_file("-O3")      end, { desc = "Compile with -O3 optimization" })
+vim.api.nvim_create_user_command('CompileDebug', function() compile_file("-Og -g")   end, { desc = "Compile with debug symbols (-Og -g)" })
+
+vim.keymap.set("n", "<leader>cc", "<cmd>Compile<CR>",      { noremap = true, silent = true, desc = "Compile current file" })
+vim.keymap.set("n", "<leader>c2", "<cmd>CompileO2<CR>",    { noremap = true, silent = true, desc = "Compile with -O2" })
+vim.keymap.set("n", "<leader>c3", "<cmd>CompileO3<CR>",    { noremap = true, silent = true, desc = "Compile with -O3" })
+vim.keymap.set("n", "<leader>cd", "<cmd>CompileDebug<CR>", { noremap = true, silent = true, desc = "Compile with debug symbols" })
 
 vim.api.nvim_create_user_command('MyCommands', function()
     local cmds = { "MainArgs", "MainVoid", "AddProto", "CommentBox", "Compile", "MyCommands", "Autogen", "Explain", "Aiconfig" }
