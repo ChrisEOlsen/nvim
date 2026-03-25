@@ -514,6 +514,7 @@ vim.api.nvim_create_user_command('Compile', function()
         print("Compilation Successful!")
     end
 end, { desc = "Compile current C/C++ file" })
+vim.keymap.set("n", "<leader>cc", "<cmd>Compile<CR>", { noremap = true, silent = true, desc = "Compile current file" })
 
 vim.api.nvim_create_user_command('MyCommands', function()
     local cmds = { "MainArgs", "MainVoid", "AddProto", "CommentBox", "Compile", "MyCommands", "Autogen", "Explain", "Aiconfig" }
