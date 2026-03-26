@@ -548,25 +548,31 @@ local function _load_shortcuts()
     local content = f:read("*a"); f:close()
     local ok, data = pcall(vim.fn.json_decode, content)
     if ok and type(data) == "table" then
-        _shortcuts = data
+        -- json_decode may return string keys ("1","2"...) — normalise to integers
+        _shortcuts = {}
+        for k, v in pairs(data) do
+            local idx = tonumber(k)
+            if idx then _shortcuts[idx] = v end
+        end
         for i = 1, 6 do
             if _shortcuts[i] then
                 _shortcut_count = i
+                _bind_shortcut(i, _shortcuts[i])   -- re-create the keymap
             end
         end
     end
 end
 
 local function _bind_shortcut(slot, text)
-    vim.keymap.set("n", "<leader>q" .. slot, function()
+    vim.keymap.set("n", "<leader>s" .. slot, function()
         local row, col = unpack(vim.api.nvim_win_get_cursor(0))
         vim.api.nvim_buf_set_text(0, row - 1, col, row - 1, col, { text })
         vim.api.nvim_win_set_cursor(0, { row, col + #text })
-    end, { noremap = true, silent = true, desc = "Shortcut q" .. slot .. ": " .. text })
+    end, { noremap = true, silent = true, desc = "Shortcut s" .. slot .. ": " .. text })
 end
 
 local function _unbind_shortcut(slot)
-    pcall(vim.keymap.del, "n", "<leader>q" .. slot)
+    pcall(vim.keymap.del, "n", "<leader>s" .. slot)
 end
 
 vim.api.nvim_create_user_command('AddShortcut', function(opts)
@@ -581,7 +587,7 @@ vim.api.nvim_create_user_command('AddShortcut', function(opts)
         _shortcuts[_shortcut_count] = text
         _bind_shortcut(_shortcut_count, text)
         _save_shortcuts()
-        print(string.format('"%s" added to <leader>q%d', text, _shortcut_count))
+        print(string.format('"%s" added to <leader>s%d', text, _shortcut_count))
     else
         -- All 6 slots full — offer replacement via ui.select
         local choices = {}
@@ -600,7 +606,7 @@ vim.api.nvim_create_user_command('AddShortcut', function(opts)
             _shortcuts[idx] = text
             _bind_shortcut(idx, text)
             _save_shortcuts()
-            print(string.format('"%s" added to <leader>q%d', text, idx))
+            print(string.format('"%s" added to <leader>s%d', text, idx))
         end)
     end
 end, { nargs = "+", desc = "Add a temporary shortcut to <leader>q1-q6" })
@@ -624,7 +630,7 @@ local function _list_shortcuts()
     else
         for i = 1, 6 do
             if _shortcuts[i] then
-                table.insert(lines, string.format("  <leader>q%d  →  %s", i, _shortcuts[i]))
+                table.insert(lines, string.format("  <leader>s%d  →  %s", i, _shortcuts[i]))
             end
         end
     end
@@ -671,7 +677,7 @@ local function _list_shortcuts()
 end
 
 vim.api.nvim_create_user_command('ListShortcuts', _list_shortcuts, { desc = "List all active temporary shortcuts" })
-vim.keymap.set("n", "<leader>qd", _list_shortcuts, { noremap = true, silent = false, desc = "List temporary shortcuts" })
+vim.keymap.set("n", "<leader>sd", _list_shortcuts, { noremap = true, silent = false, desc = "List temporary shortcuts" })
 
 _load_shortcuts()
 
