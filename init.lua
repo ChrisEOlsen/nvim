@@ -681,5 +681,51 @@ vim.keymap.set("n", "<leader>sd", _list_shortcuts, { noremap = true, silent = fa
 
 _load_shortcuts()
 
+-- Fix Tab in insert mode for C/C++: prevent cindent from re-indenting on Tab.
+-- By default, cinkeys includes "0<Tab>" which makes Tab re-indent the line
+-- using cindent rules instead of just inserting spaces.
+vim.api.nvim_create_autocmd("FileType", {
+    pattern = { "c", "cpp", "cc", "cxx" },
+    callback = function()
+        vim.opt_local.cinkeys:remove("0<Tab>")
+    end,
+})
+
+-- DEBUG (temporary)
+vim.api.nvim_create_user_command('DebugIndent', function()
+    local lines = {
+        string.format("tabstop=%d", vim.bo.tabstop),
+        string.format("softtabstop=%d", vim.bo.softtabstop),
+        string.format("shiftwidth=%d", vim.bo.shiftwidth),
+        string.format("expandtab=%s", tostring(vim.bo.expandtab)),
+        string.format("cindent=%s", tostring(vim.bo.cindent)),
+        string.format("smartindent=%s", tostring(vim.bo.smartindent)),
+        string.format("autoindent=%s", tostring(vim.bo.autoindent)),
+        string.format("indentexpr=%s", vim.bo.indentexpr == "" and "(none)" or vim.bo.indentexpr),
+        string.format("filetype=%s", vim.bo.filetype),
+        "--- insert-mode <Tab> maps ---",
+    }
+    -- Check for any insert-mode Tab remaps
+    local maps = vim.api.nvim_buf_get_keymap(0, "i")
+    local found = false
+    for _, m in ipairs(maps) do
+        if m.lhs == "<Tab>" or m.lhs == "\t" then
+            table.insert(lines, string.format("  buf: lhs=%s rhs=%s script=%s sid=%s desc=%s",
+                m.lhs, m.rhs or "[lua]", tostring(m.script), tostring(m.sid), tostring(m.desc)))
+            found = true
+        end
+    end
+    local gmaps = vim.api.nvim_get_keymap("i")
+    for _, m in ipairs(gmaps) do
+        if m.lhs == "<Tab>" or m.lhs == "\t" then
+            table.insert(lines, string.format("  global: lhs=%s rhs=%s script=%s sid=%s desc=%s",
+                m.lhs, m.rhs or "[lua]", tostring(m.script), tostring(m.sid), tostring(m.desc)))
+            found = true
+        end
+    end
+    if not found then table.insert(lines, "  (none found)") end
+    print(table.concat(lines, "\n"))
+end, { desc = "Dump indent debug info" })
+
 -- 10. AI INTEGRATION
 require("ai")
