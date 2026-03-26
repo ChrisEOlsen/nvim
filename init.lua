@@ -527,7 +527,7 @@ vim.keymap.set("n", "<leader>c3", "<cmd>CompileO3<CR>",    { noremap = true, sil
 vim.keymap.set("n", "<leader>cd", "<cmd>CompileDebug<CR>", { noremap = true, silent = true, desc = "Compile with debug symbols" })
 
 vim.api.nvim_create_user_command('MyCommands', function()
-    local cmds = { "MainArgs", "MainVoid", "AddProto", "CommentBox", "Compile", "MyCommands", "Autogen", "Explain", "Aiconfig", "AddShortcut", "ClearShortcuts" }
+    local cmds = { "MainArgs", "MainVoid", "AddProto", "CommentBox", "Compile", "MyCommands", "Autogen", "Explain", "Aiconfig", "AddShortcut", "ClearShortcuts", "ListShortcuts" }
     print("Custom Commands: " .. table.concat(cmds, ", "))
 end, { desc = "List custom commands defined in init.lua" })
 
@@ -591,6 +591,21 @@ vim.api.nvim_create_user_command('ClearShortcuts', function()
     _shortcut_count = 0
     print("All temporary shortcuts cleared.")
 end, { desc = "Clear all temporary shortcuts (<leader>q1-q6)" })
+
+local function _list_shortcuts()
+    if _shortcut_count == 0 then
+        print("No temporary shortcuts set.")
+        return
+    end
+    for i = 1, 6 do
+        if _shortcuts[i] then
+            print(string.format("<leader>q%d  →  %s", i, _shortcuts[i]))
+        end
+    end
+end
+
+vim.api.nvim_create_user_command('ListShortcuts', _list_shortcuts, { desc = "List all active temporary shortcuts" })
+vim.keymap.set("n", "<leader>qd", _list_shortcuts, { noremap = true, silent = false, desc = "List temporary shortcuts" })
 
 -- 10. AI INTEGRATION
 require("ai")
