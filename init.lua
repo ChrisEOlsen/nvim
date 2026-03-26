@@ -534,6 +534,28 @@ end, { desc = "List custom commands defined in init.lua" })
 -- 10b. TEMPORARY SHORTCUTS (<leader>q1-q6)
 local _shortcuts = {}       -- [slot] = text string
 local _shortcut_count = 0   -- number of active shortcuts
+local _shortcuts_file = vim.fn.stdpath("data") .. "/shortcuts_state.json"
+
+local function _save_shortcuts()
+    local json = vim.fn.json_encode(_shortcuts)
+    local f = io.open(_shortcuts_file, "w")
+    if f then f:write(json); f:close() end
+end
+
+local function _load_shortcuts()
+    local f = io.open(_shortcuts_file, "r")
+    if not f then return end
+    local content = f:read("*a"); f:close()
+    local ok, data = pcall(vim.fn.json_decode, content)
+    if ok and type(data) == "table" then
+        _shortcuts = data
+        for i = 1, 6 do
+            if _shortcuts[i] then
+                _shortcut_count = i
+            end
+        end
+    end
+end
 
 local function _bind_shortcut(slot, text)
     vim.keymap.set("n", "<leader>q" .. slot, function()
@@ -558,6 +580,7 @@ vim.api.nvim_create_user_command('AddShortcut', function(opts)
         _shortcut_count = _shortcut_count + 1
         _shortcuts[_shortcut_count] = text
         _bind_shortcut(_shortcut_count, text)
+        _save_shortcuts()
         print(string.format('"%s" added to <leader>q%d', text, _shortcut_count))
     else
         -- All 6 slots full — offer replacement via ui.select
@@ -576,6 +599,7 @@ vim.api.nvim_create_user_command('AddShortcut', function(opts)
             end
             _shortcuts[idx] = text
             _bind_shortcut(idx, text)
+            _save_shortcuts()
             print(string.format('"%s" added to <leader>q%d', text, idx))
         end)
     end
@@ -589,6 +613,7 @@ vim.api.nvim_create_user_command('ClearShortcuts', function()
         end
     end
     _shortcut_count = 0
+    _save_shortcuts()
     print("All temporary shortcuts cleared.")
 end, { desc = "Clear all temporary shortcuts (<leader>q1-q6)" })
 
@@ -606,6 +631,8 @@ end
 
 vim.api.nvim_create_user_command('ListShortcuts', _list_shortcuts, { desc = "List all active temporary shortcuts" })
 vim.keymap.set("n", "<leader>qd", _list_shortcuts, { noremap = true, silent = false, desc = "List temporary shortcuts" })
+
+_load_shortcuts()
 
 -- 10. AI INTEGRATION
 require("ai")
