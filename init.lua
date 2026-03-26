@@ -527,9 +527,70 @@ vim.keymap.set("n", "<leader>c3", "<cmd>CompileO3<CR>",    { noremap = true, sil
 vim.keymap.set("n", "<leader>cd", "<cmd>CompileDebug<CR>", { noremap = true, silent = true, desc = "Compile with debug symbols" })
 
 vim.api.nvim_create_user_command('MyCommands', function()
-    local cmds = { "MainArgs", "MainVoid", "AddProto", "CommentBox", "Compile", "MyCommands", "Autogen", "Explain", "Aiconfig" }
+    local cmds = { "MainArgs", "MainVoid", "AddProto", "CommentBox", "Compile", "MyCommands", "Autogen", "Explain", "Aiconfig", "AddShortcut", "ClearShortcuts" }
     print("Custom Commands: " .. table.concat(cmds, ", "))
 end, { desc = "List custom commands defined in init.lua" })
+
+-- 10b. TEMPORARY SHORTCUTS (<leader>q1-q6)
+local _shortcuts = {}       -- [slot] = text string
+local _shortcut_count = 0   -- number of active shortcuts
+
+local function _bind_shortcut(slot, text)
+    vim.keymap.set("n", "<leader>q" .. slot, function()
+        local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+        vim.api.nvim_buf_set_text(0, row - 1, col, row - 1, col, { text })
+        vim.api.nvim_win_set_cursor(0, { row, col + #text })
+    end, { noremap = true, silent = true, desc = "Shortcut q" .. slot .. ": " .. text })
+end
+
+local function _unbind_shortcut(slot)
+    pcall(vim.keymap.del, "n", "<leader>q" .. slot)
+end
+
+vim.api.nvim_create_user_command('AddShortcut', function(opts)
+    local text = opts.args
+    if text == "" then
+        print("Usage: :AddShortcut <text>")
+        return
+    end
+
+    if _shortcut_count < 6 then
+        _shortcut_count = _shortcut_count + 1
+        _shortcuts[_shortcut_count] = text
+        _bind_shortcut(_shortcut_count, text)
+        print(string.format('"%s" added to <leader>q%d', text, _shortcut_count))
+    else
+        -- All 6 slots full — offer replacement via ui.select
+        local choices = {}
+        for i = 1, 6 do
+            table.insert(choices, string.format("q%d: %s", i, _shortcuts[i]))
+        end
+        table.insert(choices, "Cancel")
+
+        vim.ui.select(choices, {
+            prompt = "All 6 slots full. Replace which shortcut? (or Cancel)",
+        }, function(choice, idx)
+            if not choice or choice == "Cancel" then
+                print("AddShortcut cancelled.")
+                return
+            end
+            _shortcuts[idx] = text
+            _bind_shortcut(idx, text)
+            print(string.format('"%s" added to <leader>q%d', text, idx))
+        end)
+    end
+end, { nargs = "+", desc = "Add a temporary shortcut to <leader>q1-q6" })
+
+vim.api.nvim_create_user_command('ClearShortcuts', function()
+    for i = 1, 6 do
+        if _shortcuts[i] then
+            _unbind_shortcut(i)
+            _shortcuts[i] = nil
+        end
+    end
+    _shortcut_count = 0
+    print("All temporary shortcuts cleared.")
+end, { desc = "Clear all temporary shortcuts (<leader>q1-q6)" })
 
 -- 10. AI INTEGRATION
 require("ai")
