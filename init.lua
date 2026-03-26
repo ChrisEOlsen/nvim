@@ -618,15 +618,56 @@ vim.api.nvim_create_user_command('ClearShortcuts', function()
 end, { desc = "Clear all temporary shortcuts (<leader>q1-q6)" })
 
 local function _list_shortcuts()
+    local lines = {}
     if _shortcut_count == 0 then
-        print("No temporary shortcuts set.")
-        return
-    end
-    for i = 1, 6 do
-        if _shortcuts[i] then
-            print(string.format("<leader>q%d  →  %s", i, _shortcuts[i]))
+        table.insert(lines, "  No temporary shortcuts set.")
+    else
+        for i = 1, 6 do
+            if _shortcuts[i] then
+                table.insert(lines, string.format("  <leader>q%d  →  %s", i, _shortcuts[i]))
+            end
         end
     end
+
+    -- Width: wide enough for the longest line (no wrapping), capped at screen
+    local max_len = 0
+    for _, line in ipairs(lines) do
+        if #line > max_len then max_len = #line end
+    end
+    local width = math.min(max_len + 2, vim.o.columns - 4)
+    local height = #lines + 2  -- +2 for top/bottom border breathing room
+
+    local col = math.floor((vim.o.columns - width) / 2)
+    local row = math.floor((vim.o.lines - height) / 2)
+
+    local buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buf })
+
+    local win = vim.api.nvim_open_win(buf, true, {
+        relative = "editor",
+        row = row, col = col,
+        width = width, height = height,
+        border = "rounded",
+        title = " shortcuts ",
+        title_pos = "center",
+    })
+
+    vim.api.nvim_set_option_value(
+        "winhighlight",
+        "FloatBorder:AIFloatBorder,FloatTitle:AIFloatBorder,Normal:Normal",
+        { win = win }
+    )
+    vim.api.nvim_set_option_value("wrap",           false, { win = win })
+    vim.api.nvim_set_option_value("number",         false, { win = win })
+    vim.api.nvim_set_option_value("relativenumber", false, { win = win })
+    vim.api.nvim_set_option_value("signcolumn",     "no",  { win = win })
+    vim.api.nvim_set_option_value("cursorline",     false, { win = win })
+
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+    vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
+
+    vim.api.nvim_buf_set_keymap(buf, "n", "q",     "<cmd>close<CR>", { noremap = true, silent = true })
+    vim.api.nvim_buf_set_keymap(buf, "n", "<Esc>", "<cmd>close<CR>", { noremap = true, silent = true })
 end
 
 vim.api.nvim_create_user_command('ListShortcuts', _list_shortcuts, { desc = "List all active temporary shortcuts" })
