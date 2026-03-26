@@ -542,6 +542,18 @@ local function _save_shortcuts()
     if f then f:write(json); f:close() end
 end
 
+local function _bind_shortcut(slot, text)
+    vim.keymap.set("n", "<leader>s" .. slot, function()
+        local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+        vim.api.nvim_buf_set_text(0, row - 1, col, row - 1, col, { text })
+        vim.api.nvim_win_set_cursor(0, { row, col + #text })
+    end, { noremap = true, silent = true, desc = "Shortcut s" .. slot .. ": " .. text })
+end
+
+local function _unbind_shortcut(slot)
+    pcall(vim.keymap.del, "n", "<leader>s" .. slot)
+end
+
 local function _load_shortcuts()
     local f = io.open(_shortcuts_file, "r")
     if not f then return end
@@ -561,18 +573,6 @@ local function _load_shortcuts()
             end
         end
     end
-end
-
-local function _bind_shortcut(slot, text)
-    vim.keymap.set("n", "<leader>s" .. slot, function()
-        local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-        vim.api.nvim_buf_set_text(0, row - 1, col, row - 1, col, { text })
-        vim.api.nvim_win_set_cursor(0, { row, col + #text })
-    end, { noremap = true, silent = true, desc = "Shortcut s" .. slot .. ": " .. text })
-end
-
-local function _unbind_shortcut(slot)
-    pcall(vim.keymap.del, "n", "<leader>s" .. slot)
 end
 
 vim.api.nvim_create_user_command('AddShortcut', function(opts)
