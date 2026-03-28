@@ -326,18 +326,36 @@ vim.keymap.set("v", "<leader>ai", function()
     local bufnr = vim.api.nvim_get_current_buf()
     vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
     vim.schedule(function()
-        vim.api.nvim_echo({{"  AI: thinking ", "Comment"}, {"▓▓▓▓▓▓▓▓▓▓▓▓", "Comment"}}, false, {})
-        vim.cmd("redraw")
-        local sys_prompt   = load_prompt("explain")
-        local selection    = get_visual_selection(bufnr, line1, line2)
-        local file_context = build_explain_context(bufnr)
-        local user_msg     =
-            "--- FILE CONTEXT START ---\n" .. file_context ..
-            "\n--- FILE CONTEXT END ---\n\n--- SELECTED CODE ---\n" ..
-            selection .. "\n--- END SELECTED CODE ---"
-        local result = call_openrouter(sys_prompt, user_msg)
-        vim.api.nvim_echo({{"", ""}}, false, {})  -- clear loading bar
-        if result then open_explain_window(result) end
+        vim.ui.input({ prompt = "Ask about selection (Enter for plain explanation): " }, function(user_question)
+            if user_question == nil then return end  -- user cancelled with <C-c>
+            local question = vim.trim(user_question)
+            local sys_prompt
+            local user_msg
+            local selection    = get_visual_selection(bufnr, line1, line2)
+            local file_context = build_explain_context(bufnr)
+            if question == "" then
+                sys_prompt = load_prompt("explain")
+                user_msg =
+                    "--- FILE CONTEXT START ---\n" .. file_context ..
+                    "\n--- FILE CONTEXT END ---\n\n--- SELECTED CODE ---\n" ..
+                    selection .. "\n--- END SELECTED CODE ---"
+            else
+                sys_prompt = [[You are a concise code assistant embedded in a text editor.
+The user highlighted a section of code and asked a specific question about it.
+Answer the question directly and concisely. Use the file context to inform your answer.
+No preamble, no filler. Keep your response within 30 lines.]]
+                user_msg =
+                    "--- FILE CONTEXT START ---\n" .. file_context ..
+                    "\n--- FILE CONTEXT END ---\n\n--- SELECTED CODE ---\n" ..
+                    selection .. "\n--- END SELECTED CODE ---\n\n--- USER QUESTION ---\n" ..
+                    question .. "\n--- END USER QUESTION ---"
+            end
+            vim.api.nvim_echo({{"  AI: thinking ", "Comment"}, {"▓▓▓▓▓▓▓▓▓▓▓▓", "Comment"}}, false, {})
+            vim.cmd("redraw")
+            local result = call_openrouter(sys_prompt, user_msg)
+            vim.api.nvim_echo({{"", ""}}, false, {})  -- clear loading bar
+            if result then open_explain_window(result) end
+        end)
     end)
 end, { noremap = true, silent = true, desc = "Explain selection" })
 
