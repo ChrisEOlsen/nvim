@@ -727,5 +727,119 @@ vim.api.nvim_create_user_command('DebugIndent', function()
     print(table.concat(lines, "\n"))
 end, { desc = "Dump indent debug info" })
 
+-- 11. KEYMAP REFERENCE
+local function show_keymaps()
+    local sections = {
+        { title = "Navigation / Search", maps = {
+            { keys = "<leader>ff",      mode = "n",   desc = "Find files (fzf)" },
+            { keys = "<leader>fg",      mode = "n",   desc = "Live grep (fzf)" },
+            { keys = "<leader>fb",      mode = "n",   desc = "List buffers (fzf)" },
+        }},
+        { title = "Git", maps = {
+            { keys = "<leader>gs",      mode = "n",   desc = "Git status" },
+            { keys = "<leader>gd",      mode = "n",   desc = "Git diff split" },
+        }},
+        { title = "LSP  (active in C/C++ buffers)", maps = {
+            { keys = "gd",              mode = "n",   desc = "Go to definition" },
+            { keys = "K",               mode = "n",   desc = "Hover documentation" },
+            { keys = "<leader>e",       mode = "n",   desc = "Open diagnostics float" },
+            { keys = "<leader>f",       mode = "n",   desc = "Format buffer" },
+        }},
+        { title = "Compile  (C/C++)", maps = {
+            { keys = "<leader>cc",      mode = "n",   desc = "Compile" },
+            { keys = "<leader>c2",      mode = "n",   desc = "Compile with -O2" },
+            { keys = "<leader>c3",      mode = "n",   desc = "Compile with -O3" },
+            { keys = "<leader>cd",      mode = "n",   desc = "Compile with -Og -g (debug)" },
+        }},
+        { title = "AI", maps = {
+            { keys = "<leader>ag",      mode = "n",   desc = "AI: generate code at cursor" },
+            { keys = "<leader>ai",      mode = "v",   desc = "AI: explain / ask about selection" },
+        }},
+        { title = "Completion  (insert mode)", maps = {
+            { keys = "<C-Space>",       mode = "i",   desc = "Trigger completion" },
+            { keys = "<CR>",            mode = "i",   desc = "Confirm completion" },
+        }},
+        { title = "Text Objects", maps = {
+            { keys = "iq / aq",         mode = "x/o", desc = "Inner / around nearest quote" },
+        }},
+        { title = "Shortcuts", maps = {
+            { keys = "<leader>s1-s6",   mode = "n",   desc = "Insert saved shortcut text" },
+            { keys = "<leader>sd",      mode = "n",   desc = "List active shortcuts" },
+        }},
+        { title = "Misc", maps = {
+            { keys = "<leader>tm",      mode = "n",   desc = "Toggle theme (dark/light/transparent)" },
+            { keys = "<leader>z",       mode = "n",   desc = "Zen mode" },
+            { keys = "<Esc>",           mode = "n",   desc = "Clear search highlight" },
+            { keys = "<leader>?",       mode = "n",   desc = "Show this keymap reference" },
+        }},
+    }
+
+    local lines = {}
+    local max_keys_len = 0
+    for _, sec in ipairs(sections) do
+        for _, m in ipairs(sec.maps) do
+            if #m.keys > max_keys_len then max_keys_len = #m.keys end
+        end
+    end
+
+    local key_col   = max_keys_len + 2
+    local mode_col  = 5
+
+    for _, sec in ipairs(sections) do
+        table.insert(lines, "")
+        table.insert(lines, "  " .. sec.title)
+        table.insert(lines, "  " .. string.rep("─", #sec.title))
+        for _, m in ipairs(sec.maps) do
+            local pad  = string.rep(" ", key_col - #m.keys)
+            local mode = string.format("[%-3s]", m.mode)
+            table.insert(lines, string.format("  %s%s%s  %s", m.keys, pad, mode, m.desc))
+        end
+    end
+    table.insert(lines, "")
+
+    -- Size
+    local max_len = 0
+    for _, l in ipairs(lines) do
+        if #l > max_len then max_len = #l end
+    end
+    local width  = math.min(max_len + 2, vim.o.columns - 4)
+    local height = math.min(#lines, vim.o.lines - 4)
+
+    local col = math.floor((vim.o.columns - width) / 2)
+    local row = math.floor((vim.o.lines - height) / 2)
+
+    local buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buf })
+
+    local win = vim.api.nvim_open_win(buf, true, {
+        relative = "editor",
+        row = row, col = col,
+        width = width, height = height,
+        border = "rounded",
+        title = " keymaps ",
+        title_pos = "center",
+    })
+
+    vim.api.nvim_set_option_value(
+        "winhighlight",
+        "FloatBorder:AIFloatBorder,FloatTitle:AIFloatBorder,Normal:Normal",
+        { win = win }
+    )
+    vim.api.nvim_set_option_value("wrap",           false, { win = win })
+    vim.api.nvim_set_option_value("number",         false, { win = win })
+    vim.api.nvim_set_option_value("relativenumber", false, { win = win })
+    vim.api.nvim_set_option_value("signcolumn",     "no",  { win = win })
+    vim.api.nvim_set_option_value("cursorline",     true,  { win = win })
+
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+    vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
+
+    vim.api.nvim_buf_set_keymap(buf, "n", "q",     "<cmd>close<CR>", { noremap = true, silent = true })
+    vim.api.nvim_buf_set_keymap(buf, "n", "<Esc>", "<cmd>close<CR>", { noremap = true, silent = true })
+end
+
+vim.api.nvim_create_user_command("Keymaps", show_keymaps, { desc = "Show all custom keymaps" })
+vim.keymap.set("n", "<leader>?", show_keymaps, { noremap = true, silent = true, desc = "Show keymap reference" })
+
 -- 10. AI INTEGRATION
 require("ai")
