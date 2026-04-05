@@ -772,6 +772,25 @@ local function show_keymaps()
             { keys = "<Esc>",           mode = "n",   desc = "Clear search highlight" },
             { keys = "<leader>?",       mode = "n",   desc = "Show this keymap reference" },
         }},
+        { title = "Commands (no shortcut)", maps = {
+            { keys = ":MainArgs",       mode = "cmd", desc = "Insert Allman style main with arguments" },
+            { keys = ":MainVoid",       mode = "cmd", desc = "Insert Allman style main void" },
+            { keys = ":AddProto",       mode = "cmd", desc = "Add function prototype and body" },
+            { keys = ":CommentBox",     mode = "cmd", desc = "K.N. King style comment box" },
+            { keys = ":Compile",        mode = "cmd", desc = "Compile current C/C++ file" },
+            { keys = ":CompileO2",      mode = "cmd", desc = "Compile with -O2 optimization" },
+            { keys = ":CompileO3",      mode = "cmd", desc = "Compile with -O3 optimization" },
+            { keys = ":CompileDebug",   mode = "cmd", desc = "Compile with debug symbols" },
+            { keys = ":MyCommands",     mode = "cmd", desc = "List custom commands" },
+            { keys = ":Autogen",        mode = "cmd", desc = "Generate code at cursor using AI" },
+            { keys = ":Explain",        mode = "cmd", desc = "Explain selected code using AI" },
+            { keys = ":Aiconfig",       mode = "cmd", desc = "Set AI model and optional provider" },
+            { keys = ":AddShortcut",    mode = "cmd", desc = "Add a temporary shortcut" },
+            { keys = ":ClearShortcuts", mode = "cmd", desc = "Clear all temporary shortcuts" },
+            { keys = ":ListShortcuts",  mode = "cmd", desc = "List all active temporary shortcuts" },
+            { keys = ":Keymaps",        mode = "cmd", desc = "Show all custom keymaps" },
+            { keys = ":DebugIndent",    mode = "cmd", desc = "Dump indent debug info" },
+        }},
     }
 
     local lines = {}
@@ -784,15 +803,71 @@ local function show_keymaps()
 
     local key_col   = max_keys_len + 2
     local mode_col  = 5
+    
+    -- Special styling for commands section
+    local cmd_section_idx = nil
+    for i, sec in ipairs(sections) do
+        if sec.title:match("Commands") then
+            cmd_section_idx = i
+            break
+        end
+    end
 
-    for _, sec in ipairs(sections) do
+    for i, sec in ipairs(sections) do
         table.insert(lines, "")
         table.insert(lines, "  " .. sec.title)
         table.insert(lines, "  " .. string.rep("─", #sec.title))
-        for _, m in ipairs(sec.maps) do
-            local pad  = string.rep(" ", key_col - #m.keys)
-            local mode = string.format("[%-3s]", m.mode)
-            table.insert(lines, string.format("  %s%s%s  %s", m.keys, pad, mode, m.desc))
+        
+        -- If this is the commands section, organize in columns
+        if i == cmd_section_idx and #sec.maps > 0 then
+            -- Arrange commands in multiple columns
+            local cmd_per_col = math.ceil(#sec.maps / 2)  -- Split into 2 columns
+            local col_maps = {}
+            
+            -- Prepare column data
+            for j = 1, math.min(cmd_per_col, #sec.maps) do
+                local left_map = sec.maps[j]
+                local right_map = sec.maps[j + cmd_per_col]
+                
+                local left_pad = string.rep(" ", key_col - #left_map.keys)
+                local left_mode = string.format("[%-3s]", left_map.mode)
+                local left_text = string.format("  %s%s%s  %s", 
+                                              left_map.keys, left_pad, left_mode, left_map.desc)
+                
+                if right_map then
+                    local right_pad = string.rep(" ", key_col - #right_map.keys)
+                    local right_mode = string.format("[%-3s]", right_map.mode)
+                    local right_text = string.format("  %s%s%s  %s", 
+                                                  right_map.keys, right_pad, right_mode, right_map.desc)
+                    table.insert(col_maps, {left_text, right_text})
+                else
+                    table.insert(col_maps, {left_text, nil})
+                end
+            end
+            
+            -- Calculate column width for alignment
+            local col_width = 0
+            for _, pair in ipairs(col_maps) do
+                if #pair[1] > col_width then col_width = #pair[1] end
+            end
+            col_width = col_width + 4  -- add some spacing between columns
+            
+            -- Add the formatted lines
+            for _, pair in ipairs(col_maps) do
+                if pair[2] then
+                    local padding = string.rep(" ", col_width - #pair[1])
+                    table.insert(lines, pair[1] .. padding .. pair[2])
+                else
+                    table.insert(lines, pair[1])
+                end
+            end
+        else
+            -- Standard single-column display for other sections
+            for _, m in ipairs(sec.maps) do
+                local pad  = string.rep(" ", key_col - #m.keys)
+                local mode = string.format("[%-3s]", m.mode)
+                table.insert(lines, string.format("  %s%s%s  %s", m.keys, pad, mode, m.desc))
+            end
         end
     end
     table.insert(lines, "")
@@ -842,4 +917,14 @@ vim.api.nvim_create_user_command("Keymaps", show_keymaps, { desc = "Show all cus
 vim.keymap.set("n", "<leader>?", show_keymaps, { noremap = true, silent = true, desc = "Show keymap reference" })
 
 -- 10. AI INTEGRATION
-require("ai")
+local ai = require("ai")
+
+-- Set AI model to display in statusline
+vim.api.nvim_create_autocmd("VimEnter", {
+    callback = function()
+        -- Ensure statusline shows AI model
+        if not vim.o.statusline:match("%%=.*AI:") then
+            vim.o.statusline = vim.o.statusline .. "%=%{v:lua.require'ai'.get_model_indicator()}%="
+        end
+    end
+})
