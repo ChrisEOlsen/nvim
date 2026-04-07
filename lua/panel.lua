@@ -29,7 +29,7 @@ local function populate(win, buf, lines, opts)
     vim.api.nvim_buf_set_keymap(buf, "n", "<Esc>", "<cmd>close<CR>", { noremap = true, silent = true })
 end
 
-function M.open(title, lines, opts)
+function M.open(lines, opts)
     opts = opts or {}
     local width = math.floor(vim.o.columns / 2)
 
