@@ -751,9 +751,16 @@ local function show_keymaps()
             { keys = "<leader>c3",      mode = "n",   desc = "Compile with -O3" },
             { keys = "<leader>cd",      mode = "n",   desc = "Compile with -Og -g (debug)" },
         }},
+        { title = "C/C++ Scaffolding", maps = {
+            { keys = ":MainArgs",   mode = "cmd", desc = "Insert main() with argc/argv" },
+            { keys = ":MainVoid",   mode = "cmd", desc = "Insert main() with no args" },
+            { keys = ":AddProto",   mode = "cmd", desc = "Add function prototype" },
+            { keys = ":CommentBox", mode = "cmd", desc = "Insert decorated comment box" },
+        }},
         { title = "AI", maps = {
-            { keys = "<leader>ag",      mode = "n",   desc = "AI: generate code at cursor" },
-            { keys = "<leader>ai",      mode = "v",   desc = "AI: explain / ask about selection" },
+            { keys = "<leader>ag",                    mode = "n",   desc = "AI: generate code at cursor" },
+            { keys = "<leader>ai",                    mode = "v",   desc = "AI: explain / ask about selection" },
+            { keys = ":Aiconfig <model> [provider]",  mode = "cmd", desc = "Set AI model and optional provider" },
         }},
         { title = "Completion  (insert mode)", maps = {
             { keys = "<C-Space>",       mode = "i",   desc = "Trigger completion" },
@@ -763,14 +770,17 @@ local function show_keymaps()
             { keys = "iq / aq",         mode = "x/o", desc = "Inner / around nearest quote" },
         }},
         { title = "Shortcuts", maps = {
-            { keys = "<leader>s1-s6",   mode = "n",   desc = "Insert saved shortcut text" },
-            { keys = "<leader>sd",      mode = "n",   desc = "List active shortcuts" },
+            { keys = "<leader>s1-s6",       mode = "n",   desc = "Insert saved shortcut text" },
+            { keys = "<leader>sd",          mode = "n",   desc = "List active shortcuts" },
+            { keys = ":AddShortcut <text>", mode = "cmd", desc = "Save text as a shortcut slot" },
+            { keys = ":ClearShortcuts",     mode = "cmd", desc = "Clear all shortcut slots" },
         }},
         { title = "Misc", maps = {
-            { keys = "<leader>tm",      mode = "n",   desc = "Toggle theme (dark/light/transparent)" },
-            { keys = "<leader>z",       mode = "n",   desc = "Zen mode" },
-            { keys = "<Esc>",           mode = "n",   desc = "Clear search highlight" },
-            { keys = "<leader>?",       mode = "n",   desc = "Show this keymap reference" },
+            { keys = "<leader>tm",  mode = "n",   desc = "Toggle theme (dark/light/transparent)" },
+            { keys = "<leader>z",   mode = "n",   desc = "Zen mode" },
+            { keys = "<Esc>",       mode = "n",   desc = "Clear search highlight" },
+            { keys = "<leader>?",   mode = "n",   desc = "Show this keymap reference" },
+            { keys = ":MyCommands", mode = "cmd", desc = "List all custom commands" },
         }},
     }
 
