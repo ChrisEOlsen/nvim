@@ -23,7 +23,7 @@ local function load_ai_config()
             return state
         end
     end
-    return { model = "qwen/qwen3-coder" }
+    return { model = "anthropic/claude-sonnet-4.6" }
 end
 
 local function save_ai_config()
@@ -329,6 +329,25 @@ vim.api.nvim_create_user_command("Explain", function(opts)
     end
 end, { range = 2, desc = "Explain selected code using AI" })
 
+-- Function to update statusline after model changes
+local function update_statusline()
+    -- Configure model indicator in statusline
+    if vim.o.statusline == "" or not vim.o.statusline:match("%%=.*AI:") then
+        -- Only add if not already present
+        vim.o.statusline = (vim.o.statusline or "") .. "%=%{v:lua.require'ai'.get_model_indicator()}%="
+    end
+end
+
+-- Expose model info for statusline
+function M.get_model_indicator()
+    local model = M.config.model
+    local short_name = model:match("/([^/]+)$") or model -- Display just the model name after the slash
+    return " AI: " .. short_name .. " "
+end
+
+-- Set up statusline when module loads
+vim.schedule(update_statusline)
+
 vim.api.nvim_create_user_command("Aiconfig", function(opts)
     -- Usage: :Aiconfig <model> [provider]
     -- Provider is everything after the first space. Omit to keep existing provider.
@@ -342,6 +361,7 @@ vim.api.nvim_create_user_command("Aiconfig", function(opts)
         M.config.model = opts.args
     end
     save_ai_config()
+    update_statusline() -- Update statusline after model change
     local msg = "AI model: " .. M.config.model
     msg = msg .. " | provider: " .. (M.config.provider or "any (OpenRouter chooses)")
     print(msg)
