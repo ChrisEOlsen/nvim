@@ -797,7 +797,7 @@ local function show_keymaps()
     end
     table.insert(lines, "")
 
-    require("panel").open(lines)
+    require("panel").open(lines, { wrap = false })
 end
 
 vim.api.nvim_create_user_command("Keymaps", show_keymaps, { desc = "Show all custom keymaps" })
