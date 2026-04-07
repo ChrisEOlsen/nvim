@@ -207,7 +207,7 @@ In `init.lua`, find this block (starting around line 800, after `table.insert(li
 In place of the deleted block (still inside `show_keymaps`, just before the closing `end`), insert:
 
 ```lua
-    require("panel").open(" keymaps ", lines)
+    require("panel").open(lines)
 ```
 
 The full tail of `show_keymaps` after the line-building loop should now look like:
@@ -215,7 +215,7 @@ The full tail of `show_keymaps` after the line-building loop should now look lik
 ```lua
     table.insert(lines, "")
 
-    require("panel").open(" keymaps ", lines)
+    require("panel").open(lines)
 end
 ```
 
