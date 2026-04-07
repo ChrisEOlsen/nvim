@@ -214,52 +214,7 @@ local function open_explain_window(text)
         table.insert(padded, " " .. line)
     end
 
-    -- Width: 60% of screen, capped at 90, minimum 50
-    local width = math.max(50, math.min(90, math.floor(vim.o.columns * 0.60)))
-
-    -- Calculate visual height accounting for word wrap
-    local content_width = width - 4  -- border + padding
-    local visual_lines = 0
-    for _, line in ipairs(lines) do
-        visual_lines = visual_lines + math.max(1, math.ceil(#line / content_width))
-    end
-    local height = math.max(3, math.min(visual_lines + 2, vim.o.lines - 4))
-
-    -- Left-aligned with a small margin, vertically centred
-    local col = 2
-    local row = math.floor((vim.o.lines - height) / 2)
-
-    local buf = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buf })
-
-    local win = vim.api.nvim_open_win(buf, true, {
-        relative = "editor",
-        row = row, col = col,
-        width = width, height = height,
-        border = "rounded",
-        title = " explain ",
-        title_pos = "left",
-    })
-
-    -- Orange border + title, no clutter
-    vim.api.nvim_set_option_value(
-        "winhighlight",
-        "FloatBorder:AIFloatBorder,FloatTitle:AIFloatBorder,Normal:Normal",
-        { win = win }
-    )
-    vim.api.nvim_set_option_value("wrap",           true,  { win = win })
-    vim.api.nvim_set_option_value("linebreak",      true,  { win = win })
-    vim.api.nvim_set_option_value("number",         false, { win = win })
-    vim.api.nvim_set_option_value("relativenumber", false, { win = win })
-    vim.api.nvim_set_option_value("signcolumn",     "no",  { win = win })
-    vim.api.nvim_set_option_value("cursorline",     false, { win = win })
-    vim.api.nvim_set_option_value("fillchars",      "eob: ", { win = win })
-
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, padded)
-    vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
-
-    vim.api.nvim_buf_set_keymap(buf, "n", "q",     "<cmd>close<CR>", { noremap = true, silent = true })
-    vim.api.nvim_buf_set_keymap(buf, "n", "<Esc>", "<cmd>close<CR>", { noremap = true, silent = true })
+    require("panel").open(padded, { wrap = true })
 end
 
 local function insert_at_cursor(text)
