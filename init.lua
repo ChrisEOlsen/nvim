@@ -797,45 +797,7 @@ local function show_keymaps()
     end
     table.insert(lines, "")
 
-    -- Size
-    local max_len = 0
-    for _, l in ipairs(lines) do
-        if #l > max_len then max_len = #l end
-    end
-    local width  = math.min(max_len + 2, vim.o.columns - 4)
-    local height = math.min(#lines, vim.o.lines - 4)
-
-    local col = math.floor((vim.o.columns - width) / 2)
-    local row = math.floor((vim.o.lines - height) / 2)
-
-    local buf = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buf })
-
-    local win = vim.api.nvim_open_win(buf, true, {
-        relative = "editor",
-        row = row, col = col,
-        width = width, height = height,
-        border = "rounded",
-        title = " keymaps ",
-        title_pos = "center",
-    })
-
-    vim.api.nvim_set_option_value(
-        "winhighlight",
-        "FloatBorder:AIFloatBorder,FloatTitle:AIFloatBorder,Normal:Normal",
-        { win = win }
-    )
-    vim.api.nvim_set_option_value("wrap",           false, { win = win })
-    vim.api.nvim_set_option_value("number",         false, { win = win })
-    vim.api.nvim_set_option_value("relativenumber", false, { win = win })
-    vim.api.nvim_set_option_value("signcolumn",     "no",  { win = win })
-    vim.api.nvim_set_option_value("cursorline",     true,  { win = win })
-
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-    vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
-
-    vim.api.nvim_buf_set_keymap(buf, "n", "q",     "<cmd>close<CR>", { noremap = true, silent = true })
-    vim.api.nvim_buf_set_keymap(buf, "n", "<Esc>", "<cmd>close<CR>", { noremap = true, silent = true })
+    require("panel").open(lines)
 end
 
 vim.api.nvim_create_user_command("Keymaps", show_keymaps, { desc = "Show all custom keymaps" })
