@@ -793,7 +793,6 @@ local function show_keymaps()
     end
 
     local key_col   = max_keys_len + 2
-    local mode_col  = 5
 
     for _, sec in ipairs(sections) do
         table.insert(lines, "")
