@@ -751,9 +751,16 @@ local function show_keymaps()
             { keys = "<leader>c3",      mode = "n",   desc = "Compile with -O3" },
             { keys = "<leader>cd",      mode = "n",   desc = "Compile with -Og -g (debug)" },
         }},
+        { title = "C/C++ Scaffolding", maps = {
+            { keys = ":MainArgs",   mode = "cmd", desc = "Insert main() with argc/argv" },
+            { keys = ":MainVoid",   mode = "cmd", desc = "Insert main() with no args" },
+            { keys = ":AddProto",   mode = "cmd", desc = "Add function prototype" },
+            { keys = ":CommentBox", mode = "cmd", desc = "Insert decorated comment box" },
+        }},
         { title = "AI", maps = {
-            { keys = "<leader>ag",      mode = "n",   desc = "AI: generate code at cursor" },
-            { keys = "<leader>ai",      mode = "v",   desc = "AI: explain / ask about selection" },
+            { keys = "<leader>ag",                    mode = "n",   desc = "AI: generate code at cursor" },
+            { keys = "<leader>ai",                    mode = "v",   desc = "AI: explain / ask about selection" },
+            { keys = ":Aiconfig <model> [provider]",  mode = "cmd", desc = "Set AI model and optional provider" },
         }},
         { title = "Completion  (insert mode)", maps = {
             { keys = "<C-Space>",       mode = "i",   desc = "Trigger completion" },
@@ -763,14 +770,17 @@ local function show_keymaps()
             { keys = "iq / aq",         mode = "x/o", desc = "Inner / around nearest quote" },
         }},
         { title = "Shortcuts", maps = {
-            { keys = "<leader>s1-s6",   mode = "n",   desc = "Insert saved shortcut text" },
-            { keys = "<leader>sd",      mode = "n",   desc = "List active shortcuts" },
+            { keys = "<leader>s1-s6",       mode = "n",   desc = "Insert saved shortcut text" },
+            { keys = "<leader>sd",          mode = "n",   desc = "List active shortcuts" },
+            { keys = ":AddShortcut <text>", mode = "cmd", desc = "Save text as a shortcut slot" },
+            { keys = ":ClearShortcuts",     mode = "cmd", desc = "Clear all shortcut slots" },
         }},
         { title = "Misc", maps = {
-            { keys = "<leader>tm",      mode = "n",   desc = "Toggle theme (dark/light/transparent)" },
-            { keys = "<leader>z",       mode = "n",   desc = "Zen mode" },
-            { keys = "<Esc>",           mode = "n",   desc = "Clear search highlight" },
-            { keys = "<leader>?",       mode = "n",   desc = "Show this keymap reference" },
+            { keys = "<leader>tm",  mode = "n",   desc = "Toggle theme (dark/light/transparent)" },
+            { keys = "<leader>z",   mode = "n",   desc = "Zen mode" },
+            { keys = "<Esc>",       mode = "n",   desc = "Clear search highlight" },
+            { keys = "<leader>?",   mode = "n",   desc = "Show this keymap reference" },
+            { keys = ":MyCommands", mode = "cmd", desc = "List all custom commands" },
         }},
     }
 
@@ -783,7 +793,6 @@ local function show_keymaps()
     end
 
     local key_col   = max_keys_len + 2
-    local mode_col  = 5
 
     for _, sec in ipairs(sections) do
         table.insert(lines, "")
@@ -797,45 +806,7 @@ local function show_keymaps()
     end
     table.insert(lines, "")
 
-    -- Size
-    local max_len = 0
-    for _, l in ipairs(lines) do
-        if #l > max_len then max_len = #l end
-    end
-    local width  = math.min(max_len + 2, vim.o.columns - 4)
-    local height = math.min(#lines, vim.o.lines - 4)
-
-    local col = math.floor((vim.o.columns - width) / 2)
-    local row = math.floor((vim.o.lines - height) / 2)
-
-    local buf = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buf })
-
-    local win = vim.api.nvim_open_win(buf, true, {
-        relative = "editor",
-        row = row, col = col,
-        width = width, height = height,
-        border = "rounded",
-        title = " keymaps ",
-        title_pos = "center",
-    })
-
-    vim.api.nvim_set_option_value(
-        "winhighlight",
-        "FloatBorder:AIFloatBorder,FloatTitle:AIFloatBorder,Normal:Normal",
-        { win = win }
-    )
-    vim.api.nvim_set_option_value("wrap",           false, { win = win })
-    vim.api.nvim_set_option_value("number",         false, { win = win })
-    vim.api.nvim_set_option_value("relativenumber", false, { win = win })
-    vim.api.nvim_set_option_value("signcolumn",     "no",  { win = win })
-    vim.api.nvim_set_option_value("cursorline",     true,  { win = win })
-
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-    vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
-
-    vim.api.nvim_buf_set_keymap(buf, "n", "q",     "<cmd>close<CR>", { noremap = true, silent = true })
-    vim.api.nvim_buf_set_keymap(buf, "n", "<Esc>", "<cmd>close<CR>", { noremap = true, silent = true })
+    require("panel").open(lines, { wrap = false })
 end
 
 vim.api.nvim_create_user_command("Keymaps", show_keymaps, { desc = "Show all custom keymaps" })
