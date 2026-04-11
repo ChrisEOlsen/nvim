@@ -54,6 +54,12 @@ Respond in two short sections:
 1. SYNTAX: Identify the language constructs and patterns used (2-4 lines max).
 2. PURPOSE: Explain what this code does in the context of the file (3-5 lines max).
 Be direct. No preamble, no filler. Fit your entire response within 20 lines.]],
+    autoedit = [[You are a code editing assistant embedded in a text editor.
+Output the ENTIRE file with your changes applied. No explanations, no markdown fences, no commentary.
+Your entire response is the new file contents. Preserve ALL code not related to the task exactly as given.
+Match the language, style, and conventions of the file exactly.
+If the file is C or C++, use Allman style braces and omit braces for single-statement bodies.
+Cursor is at line N refers to where the user is. Focus region lines X-Y is the user's selection.]],
 }
 
 -- --------------------------------------------------------------------------
