@@ -67,6 +67,89 @@ local function strip_fences(text)
     return text
 end
 
+local function myers_diff(a, b)
+    local n, m = #a, #b
+    local dp = {}
+    for i = 0, n do
+        dp[i] = {}
+        for j = 0, m do
+            if i == 0 or j == 0 then
+                dp[i][j] = 0
+            elseif a[i] == b[j] then
+                dp[i][j] = dp[i - 1][j - 1] + 1
+            else
+                dp[i][j] = math.max(dp[i - 1][j], dp[i][j - 1])
+            end
+        end
+    end
+    local ops = {}
+    local i, j = n, m
+    while i > 0 or j > 0 do
+        if i > 0 and j > 0 and a[i] == b[j] then
+            table.insert(ops, 1, { op = "keep",   text = a[i] })
+            i, j = i - 1, j - 1
+        elseif j > 0 and (i == 0 or dp[i][j - 1] >= dp[i - 1][j]) then
+            table.insert(ops, 1, { op = "insert", text = b[j] })
+            j = j - 1
+        else
+            table.insert(ops, 1, { op = "delete", text = a[i] })
+            i = i - 1
+        end
+    end
+    return ops
+end
+
+local function format_diff_lines(ops)
+    local CONTEXT = 3
+    local display = { "AutoEdit diff — y to apply, n/q/Esc to cancel", "" }
+    local highlights = {}  -- each entry: { 1-based display line index, hl_group }
+
+    local changed = {}
+    for idx, op in ipairs(ops) do
+        if op.op ~= "keep" then changed[idx] = true end
+    end
+
+    local show = {}
+    for idx = 1, #ops do
+        if changed[idx] then
+            for k = math.max(1, idx - CONTEXT), math.min(#ops, idx + CONTEXT) do
+                show[k] = true
+            end
+        end
+    end
+
+    local old_n, new_n = 0, 0
+    local last_shown = nil
+
+    for idx, op in ipairs(ops) do
+        if op.op == "keep" then
+            old_n = old_n + 1; new_n = new_n + 1
+        elseif op.op == "delete" then
+            old_n = old_n + 1
+        else
+            new_n = new_n + 1
+        end
+
+        if show[idx] then
+            if last_shown ~= nil and idx > last_shown + 1 then
+                table.insert(display, "  ...")
+            end
+            if op.op == "keep" then
+                table.insert(display, string.format("  line %4d   %s", old_n, op.text))
+            elseif op.op == "delete" then
+                table.insert(display, string.format("- line %4d   %s", old_n, op.text))
+                table.insert(highlights, { #display, "DiffDelete" })
+            else
+                table.insert(display, string.format("+ line %4d   %s", new_n, op.text))
+                table.insert(highlights, { #display, "DiffAdd" })
+            end
+            last_shown = idx
+        end
+    end
+
+    return display, highlights
+end
+
 local function load_prompt(name)
     local path = vim.fn.stdpath("config") .. "/ai_prompts/" .. name .. ".txt"
     local f = io.open(path, "r")
