@@ -302,8 +302,7 @@ local function open_autoedit_diff(old_lines, new_lines, bufnr)
     end
 
     local display, highlights = format_diff_lines(ops)
-    require("panel").open(display, { wrap = false })
-    local diff_buf = vim.api.nvim_get_current_buf()
+    local diff_buf = require("panel").open(display, { wrap = false })
 
     for _, hl in ipairs(highlights) do
         -- hl[1] is 1-based display line index; nvim_buf_add_highlight is 0-based

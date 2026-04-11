@@ -43,6 +43,7 @@ function M.open(lines, opts)
         vim.api.nvim_win_set_width(panel_win, width)
         vim.api.nvim_set_current_win(panel_win)
         populate(panel_win, buf, lines, opts)
+        return buf
     else
         -- Open a new right-side split
         vim.cmd("botright vsplit")
@@ -51,6 +52,7 @@ function M.open(lines, opts)
         vim.api.nvim_win_set_buf(panel_win, buf)
         vim.api.nvim_win_set_width(panel_win, width)
         populate(panel_win, buf, lines, opts)
+        return buf
     end
 end
 
