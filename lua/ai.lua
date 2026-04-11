@@ -394,6 +394,73 @@ vim.keymap.set("n", "<leader>ag", function()
     end)
 end, { noremap = true, silent = true, desc = "AI generate code at cursor" })
 
+local function run_autoedit(bufnr, cursor_line, visual_range, task)
+    vim.api.nvim_echo(
+        { { "  AI: thinking ", "Comment" }, { "▓▓▓▓▓▓▓▓▓▓▓▓", "Comment" } },
+        false, {}
+    )
+    vim.cmd("redraw")
+
+    local old_lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+    local sys_prompt = load_prompt("autoedit")
+
+    local focus_hint = ""
+    if visual_range then
+        focus_hint = "\nFocus region is lines " .. visual_range[1] .. "-" .. visual_range[2] .. "."
+    end
+
+    local user_msg =
+        "--- FILE START ---\n" .. table.concat(old_lines, "\n") .. "\n--- FILE END ---\n\n" ..
+        "Cursor is at line " .. cursor_line .. "." .. focus_hint .. "\n\nTask: " .. task
+
+    local result = call_openrouter(sys_prompt, user_msg)
+    vim.api.nvim_echo({ { "", "" } }, false, {})  -- clear loading bar
+
+    if not result then return end
+
+    local new_lines = vim.split(result, "\n", { plain = true })
+    -- Strip a spurious trailing empty line that some models append
+    if new_lines[#new_lines] == "" then table.remove(new_lines) end
+
+    open_autoedit_diff(old_lines, new_lines, bufnr)
+end
+
+vim.api.nvim_create_user_command("AutoEdit", function(opts)
+    local bufnr       = vim.api.nvim_get_current_buf()
+    local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
+    run_autoedit(bufnr, cursor_line, nil, opts.args)
+end, { nargs = "+", desc = "Edit current file using AI" })
+
+vim.keymap.set("n", "<leader>ae", function()
+    vim.ui.input({ prompt = "AutoEdit: " }, function(input)
+        if not input or input == "" then return end
+        local bufnr       = vim.api.nvim_get_current_buf()
+        local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
+        vim.schedule(function()
+            run_autoedit(bufnr, cursor_line, nil, input)
+        end)
+    end)
+end, { noremap = true, silent = true, desc = "AI edit file" })
+
+vim.keymap.set("v", "<leader>ae", function()
+    local line1 = vim.fn.line("'<")
+    local line2 = vim.fn.line("'>")
+    local bufnr       = vim.api.nvim_get_current_buf()
+    local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
+    vim.schedule(function()
+        vim.ui.input(
+            { prompt = "AutoEdit (lines " .. line1 .. "-" .. line2 .. "): " },
+            function(input)
+                if not input or input == "" then return end
+                vim.schedule(function()
+                    run_autoedit(bufnr, cursor_line, { line1, line2 }, input)
+                end)
+            end
+        )
+    end)
+end, { noremap = true, silent = true, desc = "AI edit selection" })
+
 -- Visual mode shortcut: select code, press <leader>ai to explain
 vim.keymap.set("v", "<leader>ai", function()
     -- Capture range before leaving visual mode
