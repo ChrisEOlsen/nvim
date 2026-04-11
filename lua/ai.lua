@@ -289,6 +289,38 @@ local function call_openrouter(system_prompt, user_message)
     return strip_fences(response.choices[1].message.content)
 end
 
+local function open_autoedit_diff(old_lines, new_lines, bufnr)
+    local ops = myers_diff(old_lines, new_lines)
+
+    local has_changes = false
+    for _, op in ipairs(ops) do
+        if op.op ~= "keep" then has_changes = true; break end
+    end
+    if not has_changes then
+        vim.notify("AutoEdit: no changes suggested", vim.log.levels.INFO)
+        return
+    end
+
+    local display, highlights = format_diff_lines(ops)
+    require("panel").open(display, { wrap = false })
+    local diff_buf = vim.api.nvim_get_current_buf()
+
+    for _, hl in ipairs(highlights) do
+        -- hl[1] is 1-based display line index; nvim_buf_add_highlight is 0-based
+        vim.api.nvim_buf_add_highlight(diff_buf, -1, hl[2], hl[1] - 1, 0, -1)
+    end
+
+    vim.keymap.set("n", "y", function()
+        vim.cmd("close")
+        vim.schedule(function()
+            vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, new_lines)
+        end)
+    end, { buffer = diff_buf, noremap = true, silent = true })
+
+    vim.keymap.set("n", "n", "<cmd>close<CR>",
+        { buffer = diff_buf, noremap = true, silent = true })
+end
+
 -- --------------------------------------------------------------------------
 -- DISPLAY LAYER
 -- --------------------------------------------------------------------------
