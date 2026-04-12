@@ -525,7 +525,7 @@ vim.keymap.set("n", "<leader>cc", "<cmd>Compile<CR>",      { noremap = true, sil
 vim.keymap.set("n", "<leader>c2", "<cmd>CompileO2<CR>",    { noremap = true, silent = true, desc = "Compile with -O2" })
 vim.keymap.set("n", "<leader>c3", "<cmd>CompileO3<CR>",    { noremap = true, silent = true, desc = "Compile with -O3" })
 vim.keymap.set("n", "<leader>cd", "<cmd>CompileDebug<CR>", { noremap = true, silent = true, desc = "Compile with debug symbols" })
-vim.keymap.set("n", "<leader>cs", "A;<Esc>",               { noremap = true, silent = true, desc = "Append ; to line end" })
+vim.keymap.set("n", "<leader>;",  "A;<Esc>",               { noremap = true, silent = true, desc = "Append ; to line end" })
 
 vim.api.nvim_create_user_command('MyCommands', function()
     local cmds = { "MainArgs", "MainVoid", "AddProto", "CommentBox", "Compile", "MyCommands", "Autogen", "Explain", "Aiconfig", "AddShortcut", "ClearShortcuts", "ListShortcuts" }
@@ -751,7 +751,7 @@ local function show_keymaps()
             { keys = "<leader>c2",      mode = "n",   desc = "Compile with -O2" },
             { keys = "<leader>c3",      mode = "n",   desc = "Compile with -O3" },
             { keys = "<leader>cd",      mode = "n",   desc = "Compile with -Og -g (debug)" },
-            { keys = "<leader>cs",      mode = "n",   desc = "Append ; to line end" },
+            { keys = "<leader>;",       mode = "n",   desc = "Append ; to line end" },
         }},
         { title = "C/C++ Scaffolding", maps = {
             { keys = ":MainArgs",   mode = "cmd", desc = "Insert main() with argc/argv" },
