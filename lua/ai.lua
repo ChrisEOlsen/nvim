@@ -496,7 +496,10 @@ No preamble, no filler. Keep your response within 30 lines.]]
             vim.cmd("redraw")
             local result = call_openrouter(sys_prompt, user_msg)
             vim.api.nvim_echo({{"", ""}}, false, {})  -- clear loading bar
-            if result then open_explain_window(result) end
+            if result then
+                open_explain_window(result)
+                require("history").save(bufnr, result)
+            end
         end)
     end)
 end, { noremap = true, silent = true, desc = "Explain selection" })
@@ -513,6 +516,7 @@ vim.api.nvim_create_user_command("Explain", function(opts)
     local result = call_openrouter(system_prompt, user_message)
     if result then
         open_explain_window(result)
+        require("history").save(bufnr, result)
     end
 end, { range = 2, desc = "Explain selected code using AI" })
 
@@ -553,5 +557,10 @@ vim.api.nvim_create_user_command("Aiconfig", function(opts)
     msg = msg .. " | provider: " .. (M.config.provider or "any (OpenRouter chooses)")
     print(msg)
 end, { nargs = "+", desc = "Set AI model and optional provider (e.g. :Aiconfig qwen/qwen3-coder Google Vertex)" })
+
+vim.keymap.set("n", "<leader>ah", function()
+    local bufnr = vim.api.nvim_get_current_buf()
+    require("history").open_panel(bufnr)
+end, { noremap = true, silent = true, desc = "AI History for current file" })
 
 return M
