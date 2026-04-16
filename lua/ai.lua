@@ -50,9 +50,10 @@ Always use Allman style braces (opening brace on its own line).
 Omit braces for single-statement bodies (if, else, for, while, etc.) — put the statement on the next line, indented, with no braces.
 The user message includes "Cursor is at line N." — any positional references in the task (e.g. "above", "below", "here") refer to that location in the file.]],
     explain = [[You are a concise code explanation assistant embedded in a text editor.
+Respond in plain text only. No markdown, no bullet symbols, no headers, no bold, no code fences.
 Respond in two short sections:
-1. SYNTAX: Identify the language constructs and patterns used (2-4 lines max).
-2. PURPOSE: Explain what this code does in the context of the file (3-5 lines max).
+SYNTAX: Identify the language constructs and patterns used (2-4 lines max).
+PURPOSE: Explain what this code does in the context of the file (3-5 lines max).
 Be direct. No preamble, no filler. Fit your entire response within 20 lines.]],
     autoedit = [[You are a code editing assistant embedded in a text editor.
 Output the ENTIRE file with your changes applied. No explanations, no markdown fences, no commentary.
@@ -485,6 +486,7 @@ vim.keymap.set("v", "<leader>ai", function()
                 sys_prompt = [[You are a concise code assistant embedded in a text editor.
 The user highlighted a section of code and asked a specific question about it.
 Answer the question directly and concisely. Use the file context to inform your answer.
+Respond in plain text only. No markdown, no bullet symbols, no headers, no bold, no code fences.
 No preamble, no filler. Keep your response within 30 lines.]]
                 user_msg =
                     "--- FILE CONTEXT START ---\n" .. file_context ..
