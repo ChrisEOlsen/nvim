@@ -19,7 +19,7 @@ local function load_ai_config()
         local content = f:read("*a")
         f:close()
         local ok, state = pcall(vim.fn.json_decode, content)
-        if ok and state then
+        if ok and type(state) == "table" then
             if not state.favorites then
                 state.favorites = {}
             end
