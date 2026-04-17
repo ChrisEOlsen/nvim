@@ -20,10 +20,13 @@ local function load_ai_config()
         f:close()
         local ok, state = pcall(vim.fn.json_decode, content)
         if ok and state then
+            if not state.favorites then
+                state.favorites = {}
+            end
             return state
         end
     end
-    return { model = "anthropic/claude-sonnet-4.6" }
+    return { model = "anthropic/claude-sonnet-4.6", favorites = {} }
 end
 
 local function save_ai_config()
