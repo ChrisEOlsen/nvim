@@ -585,6 +585,10 @@ vim.keymap.set("n", "<leader>ah", function()
     require("history").open_panel(bufnr)
 end, { noremap = true, silent = true, desc = "AI History for current file" })
 
+vim.keymap.set("n", "<leader>ac", function()
+    require("models").open_picker()
+end, { noremap = true, silent = true, desc = "AI: pick model from favorites" })
+
 function M.save_config()
     save_ai_config()
 end
