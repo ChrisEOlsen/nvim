@@ -762,7 +762,10 @@ local function show_keymaps()
         { title = "AI", maps = {
             { keys = "<leader>ag",                    mode = "n",   desc = "AI: generate code at cursor" },
             { keys = "<leader>ai",                    mode = "v",   desc = "AI: explain / ask about selection" },
+            { keys = "<leader>ac",                    mode = "n",   desc = "AI: pick model from favorites" },
+            { keys = "<leader>ah",                    mode = "n",   desc = "AI: history for current file" },
             { keys = ":Aiconfig <model> [provider]",  mode = "cmd", desc = "Set AI model and optional provider" },
+            { keys = ":AddModel <model-id>",          mode = "cmd", desc = "Add model ID to favorites" },
         }},
         { title = "Completion  (insert mode)", maps = {
             { keys = "<C-Space>",       mode = "i",   desc = "Trigger completion" },
