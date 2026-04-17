@@ -563,6 +563,23 @@ vim.api.nvim_create_user_command("Aiconfig", function(opts)
     print(msg)
 end, { nargs = "+", desc = "Set AI model and optional provider (e.g. :Aiconfig qwen/qwen3-coder Google Vertex)" })
 
+vim.api.nvim_create_user_command("AddModel", function(opts)
+    local id = vim.trim(opts.args)
+    if id == "" then
+        print("Usage: :AddModel <model-id>")
+        return
+    end
+    for _, existing in ipairs(M.config.favorites) do
+        if existing == id then
+            print("Already in favorites: " .. id)
+            return
+        end
+    end
+    table.insert(M.config.favorites, id)
+    save_ai_config()
+    print("Added to favorites: " .. id)
+end, { nargs = "+", desc = "Add a model ID to the AI favorites list" })
+
 vim.keymap.set("n", "<leader>ah", function()
     local bufnr = vim.api.nvim_get_current_buf()
     require("history").open_panel(bufnr)
