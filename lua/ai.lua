@@ -585,4 +585,8 @@ vim.keymap.set("n", "<leader>ah", function()
     require("history").open_panel(bufnr)
 end, { noremap = true, silent = true, desc = "AI History for current file" })
 
+function M.save_config()
+    save_ai_config()
+end
+
 return M
