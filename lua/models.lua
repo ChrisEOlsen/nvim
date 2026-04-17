@@ -41,9 +41,6 @@ function M.open_picker()
     local lines = build_lines(favorites)
     local buf = require("panel").open(lines, { wrap = false })
 
-    -- Make buffer navigable but not editable
-    vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
-
     -- Position cursor on the currently active model if it's in the list
     local current = ai.config.model
     local start_line = fav_line(1)
