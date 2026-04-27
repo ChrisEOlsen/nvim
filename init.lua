@@ -22,7 +22,8 @@ local theme_state_file = vim.fn.stdpath("data") .. "/theme_state.json"
 local function save_theme_state()
     local state = {
         is_dark_mode = vim.g.is_dark_mode,
-        is_transparent = vim.g.is_transparent
+        is_transparent = vim.g.is_transparent,
+        syntax_highlight = vim.g.syntax_highlight,
     }
     local json = vim.fn.json_encode(state)
     local f = io.open(theme_state_file, "w")
@@ -41,15 +42,18 @@ local function load_theme_state()
         if ok and state then
             vim.g.is_dark_mode = state.is_dark_mode
             vim.g.is_transparent = state.is_transparent
+            vim.g.syntax_highlight = state.syntax_highlight or false
         else
             -- Default fallbacks if JSON invalid
             vim.g.is_dark_mode = true
             vim.g.is_transparent = false
+            vim.g.syntax_highlight = false
         end
     else
         -- Defaults if file doesn't exist
         vim.g.is_dark_mode = true
         vim.g.is_transparent = false
+        vim.g.syntax_highlight = false
     end
 end
 
@@ -249,41 +253,65 @@ fix_cursor()
 
 -- 5. MONK MODE: PLAIN TEXT WITH COMMENTS
 -- We MUST have 'syntax on' to detect comments, but we strip all other colors.
+local monk_mode_syntax_groups = {
+    "Constant", "Identifier", "Statement", "PreProc", "Type", "Special",
+    "Underlined", "Error", "Todo", "String", "Function", "Conditional",
+    "Repeat", "Operator", "Structure", "Boolean", "Number", "Float",
+    "Label", "Keyword", "Exception", "Include", "Define", "Macro",
+    "PreCondit", "StorageClass", "Typedef", "Tag", "SpecialChar",
+    "Delimiter", "SpecialComment", "Debug",
+    -- LSP Semantic Token Groups
+    "@lsp.type.class", "@lsp.type.comment", "@lsp.type.decorator",
+    "@lsp.type.enum", "@lsp.type.enumMember", "@lsp.type.event",
+    "@lsp.type.function", "@lsp.type.interface", "@lsp.type.keyword",
+    "@lsp.type.macro", "@lsp.type.method", "@lsp.type.modifier",
+    "@lsp.type.namespace", "@lsp.type.number", "@lsp.type.operator",
+    "@lsp.type.parameter", "@lsp.type.property", "@lsp.type.regexp",
+    "@lsp.type.string", "@lsp.type.struct", "@lsp.type.type",
+    "@lsp.type.typeParameter", "@lsp.type.variable",
+}
+
+local function apply_monk_mode()
+    vim.cmd("syntax on")
+    for _, group in ipairs(monk_mode_syntax_groups) do
+        vim.api.nvim_set_hl(0, group, { link = "Normal" })
+    end
+    vim.api.nvim_set_hl(0, "Comment", { fg = "#808080", italic = true, force = true })
+end
+
 vim.api.nvim_create_autocmd({ "ColorScheme", "BufEnter" }, {
     pattern = "*",
     callback = function()
-        vim.cmd("syntax on") -- Enable syntax so we know what is a comment
-
-        -- 1. Reset all standard syntax groups to link to "Normal" (plain text)
-        local syntax_groups = {
-            "Constant", "Identifier", "Statement", "PreProc", "Type", "Special",
-            "Underlined", "Error", "Todo", "String", "Function", "Conditional",
-            "Repeat", "Operator", "Structure", "Boolean", "Number", "Float",
-            "Label", "Keyword", "Exception", "Include", "Define", "Macro",
-            "PreCondit", "StorageClass", "Typedef", "Tag", "SpecialChar",
-            "Delimiter", "SpecialComment", "Debug",
-            -- LSP Semantic Token Groups
-            "@lsp.type.class", "@lsp.type.comment", "@lsp.type.decorator",
-            "@lsp.type.enum", "@lsp.type.enumMember", "@lsp.type.event",
-            "@lsp.type.function", "@lsp.type.interface", "@lsp.type.keyword",
-            "@lsp.type.macro", "@lsp.type.method", "@lsp.type.modifier",
-            "@lsp.type.namespace", "@lsp.type.number", "@lsp.type.operator",
-            "@lsp.type.parameter", "@lsp.type.property", "@lsp.type.regexp",
-            "@lsp.type.string", "@lsp.type.struct", "@lsp.type.type",
-            "@lsp.type.typeParameter", "@lsp.type.variable",
-        }
-
-        for _, group in ipairs(syntax_groups) do
-            vim.api.nvim_set_hl(0, group, { link = "Normal" })
+        if not vim.g.syntax_highlight then
+            apply_monk_mode()
         end
-
-        -- 2. Force Comments to be a distinct grey
-        vim.api.nvim_set_hl(0, "Comment", { fg = "#808080", italic = true, force = true })
-
-        -- 3. Re-apply cursor/background fixes
         fix_cursor()
     end,
 })
+
+-- SyntaxHighlight: 1 = VSCode-style colors, 0 = monk mode (plain text + grey comments)
+vim.api.nvim_create_user_command('SyntaxHighlight', function(opts)
+    local val = tonumber(opts.args)
+    if val == nil then
+        print("Usage: :SyntaxHighlight <0|1>")
+        return
+    end
+    vim.g.syntax_highlight = (val == 1)
+    save_theme_state()
+    if vim.g.syntax_highlight then
+        -- Reload colorscheme to restore its syntax colors
+        if vim.g.is_dark_mode then
+            vim.cmd("colorscheme github_dark")
+        else
+            vim.cmd("colorscheme github_light")
+        end
+        print("Syntax highlight: on (VSCode style)")
+    else
+        apply_monk_mode()
+        fix_cursor()
+        print("Syntax highlight: off (monk mode)")
+    end
+end, { nargs = 1, desc = "Set syntax highlighting: 1=VSCode style, 0=monk mode" })
 
 -- 6. REMOTE CLIPBOARD (OSC 52)
 vim.opt.clipboard = "unnamedplus"
@@ -781,11 +809,12 @@ local function show_keymaps()
             { keys = ":ClearShortcuts",     mode = "cmd", desc = "Clear all shortcut slots" },
         }},
         { title = "Misc", maps = {
-            { keys = "<leader>tm",  mode = "n",   desc = "Toggle theme (dark/light/transparent)" },
-            { keys = "<leader>z",   mode = "n",   desc = "Zen mode" },
-            { keys = "<Esc>",       mode = "n",   desc = "Clear search highlight" },
-            { keys = "<leader>?",   mode = "n",   desc = "Show this keymap reference" },
-            { keys = ":MyCommands", mode = "cmd", desc = "List all custom commands" },
+            { keys = "<leader>tm",             mode = "n",   desc = "Toggle theme (dark/light/transparent)" },
+            { keys = "<leader>z",              mode = "n",   desc = "Zen mode" },
+            { keys = "<Esc>",                  mode = "n",   desc = "Clear search highlight" },
+            { keys = "<leader>?",              mode = "n",   desc = "Show this keymap reference" },
+            { keys = ":SyntaxHighlight <0|1>", mode = "cmd", desc = "Syntax highlight: 1=VSCode style, 0=monk mode" },
+            { keys = ":MyCommands",            mode = "cmd", desc = "List all custom commands" },
         }},
     }
 
