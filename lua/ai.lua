@@ -446,8 +446,10 @@ vim.keymap.set("n", "<leader>ae", function()
 end, { noremap = true, silent = true, desc = "AI edit file" })
 
 vim.keymap.set("v", "<leader>ae", function()
-    local line1 = vim.fn.line("'<")
-    local line2 = vim.fn.line("'>")
+    local anchor = vim.fn.line("v")
+    local cursor_pos = vim.fn.line(".")
+    local line1  = math.min(anchor, cursor_pos)
+    local line2  = math.max(anchor, cursor_pos)
     local bufnr       = vim.api.nvim_get_current_buf()
     local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
     vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
@@ -466,10 +468,12 @@ end, { noremap = true, silent = true, desc = "AI edit selection" })
 
 -- Visual mode shortcut: select code, press <leader>ai to explain
 vim.keymap.set("v", "<leader>ai", function()
-    -- Capture range before leaving visual mode
-    local line1 = vim.fn.line("'<")
-    local line2 = vim.fn.line("'>")
-    local bufnr = vim.api.nvim_get_current_buf()
+    -- '< and '> are only written when exiting visual mode; read live positions instead
+    local anchor = vim.fn.line("v")
+    local cursor = vim.fn.line(".")
+    local line1  = math.min(anchor, cursor)
+    local line2  = math.max(anchor, cursor)
+    local bufnr  = vim.api.nvim_get_current_buf()
     vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
     vim.schedule(function()
         vim.ui.input({ prompt = "Ask about selection (Enter for plain explanation): " }, function(user_question)
@@ -503,7 +507,8 @@ No preamble, no filler. Keep your response within 30 lines.]]
             vim.api.nvim_echo({{"", ""}}, false, {})  -- clear loading bar
             if result then
                 open_explain_window(result)
-                require("history").save(bufnr, result)
+                local prompt_label = question ~= "" and question or "plain explanation"
+                require("history").save(bufnr, result, prompt_label, selection)
             end
         end)
     end)
@@ -521,7 +526,7 @@ vim.api.nvim_create_user_command("Explain", function(opts)
     local result = call_openrouter(system_prompt, user_message)
     if result then
         open_explain_window(result)
-        require("history").save(bufnr, result)
+        require("history").save(bufnr, result, "plain explanation", selection)
     end
 end, { range = 2, desc = "Explain selected code using AI" })
 

@@ -34,16 +34,19 @@ local function load_by_path(buf_path)
     return entries
 end
 
-function M.save(bufnr, text)
+function M.save(bufnr, text, prompt, selection)
     local buf_path = vim.api.nvim_buf_get_name(bufnr)
     if buf_path == "" then return end
     ensure_dir()
     local entries = load_by_path(buf_path)
-    table.insert(entries, {
+    local entry = {
         timestamp = os.date("%Y-%m-%dT%H:%M:%S"),
         source    = buf_path,
         content   = text,
-    })
+    }
+    if prompt    and prompt    ~= "" then entry.prompt    = prompt    end
+    if selection and selection ~= "" then entry.selection = selection end
+    table.insert(entries, entry)
     while #entries > MAX_ENTRIES do
         table.remove(entries, 1)
     end
@@ -75,6 +78,20 @@ local function build_panel_lines(entry, index, total, source_path)
     table.insert(lines, "")
     for _, line in ipairs(vim.split(entry.content:gsub("\n+$", ""), "\n")) do
         table.insert(lines, " " .. line)
+    end
+    if entry.prompt or entry.selection then
+        table.insert(lines, "")
+        table.insert(lines, " " .. string.rep("─", panel_width - 2))
+        if entry.prompt then
+            table.insert(lines, " Prompt: " .. entry.prompt)
+        end
+        if entry.selection then
+            if entry.prompt then table.insert(lines, "") end
+            table.insert(lines, " Selection:")
+            for _, sel_line in ipairs(vim.split(entry.selection:gsub("\n+$", ""), "\n")) do
+                table.insert(lines, "   " .. sel_line)
+            end
+        end
     end
     local pagination = "[" .. index .. " / " .. total .. "]"
     local padding = string.rep(" ", math.max(0, panel_width - #pagination - 1))
