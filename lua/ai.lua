@@ -255,6 +255,8 @@ local function call_openrouter(system_prompt, user_message)
         "https://openrouter.ai/api/v1/chat/completions",
         "-H", "Authorization: Bearer " .. api_key,
         "-H", "Content-Type: application/json",
+        "-H", "HTTP-Referer: https://github.com/ChrisEOlsen/nvim",
+        "-H", "X-Title: ai-nvim",
         "--data", "@" .. tmpfile,
     })
     local exit_code = vim.v.shell_error
