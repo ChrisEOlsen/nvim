@@ -784,7 +784,7 @@ local function show_keymaps()
             { keys = "<leader>gs",      mode = "n",   desc = "Git status" },
             { keys = "<leader>gd",      mode = "n",   desc = "Git diff split" },
         }},
-        { title = "LSP  (active in C/C++ buffers)", maps = {
+        { title = "LSP  (active in C/C++ and Python buffers)", maps = {
             { keys = "gd",              mode = "n",   desc = "Go to definition" },
             { keys = "K",               mode = "n",   desc = "Hover documentation" },
             { keys = "<leader>e",       mode = "n",   desc = "Open diagnostics float" },
