@@ -385,6 +385,12 @@ lspconfig.pyright.setup({
     vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float, opts)
     vim.keymap.set('n', '<leader>f', vim.lsp.buf.format, opts)
   end,
+  on_new_config = function(new_config, root_dir)
+    local venv_python = root_dir .. "/.venv/bin/python"
+    if vim.fn.executable(venv_python) == 1 then
+      new_config.settings.python.pythonPath = venv_python
+    end
+  end,
   settings = {
     python = {
       venvPath = ".",
