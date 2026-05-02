@@ -377,6 +377,22 @@ lspconfig.clangd.setup({
   end,
 })
 
+lspconfig.pyright.setup({
+  on_attach = function(client, bufnr)
+    local opts = { buffer = bufnr, noremap = true, silent = true }
+    vim.keymap.set('n', 'gd', vim.lsp.buf.definition, opts)
+    vim.keymap.set('n', 'K',  vim.lsp.buf.hover, opts)
+    vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float, opts)
+    vim.keymap.set('n', '<leader>f', vim.lsp.buf.format, opts)
+  end,
+  settings = {
+    python = {
+      venvPath = ".",
+      venv = ".venv",
+    },
+  },
+})
+
 local cmp = require('cmp')
 cmp.setup({
   mapping = cmp.mapping.preset.insert({
