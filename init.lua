@@ -377,28 +377,6 @@ lspconfig.clangd.setup({
   end,
 })
 
-lspconfig.pyright.setup({
-  on_attach = function(client, bufnr)
-    local opts = { buffer = bufnr, noremap = true, silent = true }
-    vim.keymap.set('n', 'gd', vim.lsp.buf.definition, opts)
-    vim.keymap.set('n', 'K',  vim.lsp.buf.hover, opts)
-    vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float, opts)
-    vim.keymap.set('n', '<leader>f', vim.lsp.buf.format, opts)
-  end,
-  on_new_config = function(new_config, root_dir)
-    local venv_python = root_dir .. "/.venv/bin/python"
-    if vim.fn.executable(venv_python) == 1 then
-      new_config.settings.python.pythonPath = venv_python
-    end
-  end,
-  settings = {
-    python = {
-      venvPath = ".",
-      venv = ".venv",
-    },
-  },
-})
-
 local cmp = require('cmp')
 cmp.setup({
   mapping = cmp.mapping.preset.insert({
@@ -790,7 +768,7 @@ local function show_keymaps()
             { keys = "<leader>gs",      mode = "n",   desc = "Git status" },
             { keys = "<leader>gd",      mode = "n",   desc = "Git diff split" },
         }},
-        { title = "LSP  (active in C/C++ and Python buffers)", maps = {
+        { title = "LSP  (active in C/C++ buffers)", maps = {
             { keys = "gd",              mode = "n",   desc = "Go to definition" },
             { keys = "K",               mode = "n",   desc = "Hover documentation" },
             { keys = "<leader>e",       mode = "n",   desc = "Open diagnostics float" },
