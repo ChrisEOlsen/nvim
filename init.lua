@@ -555,8 +555,72 @@ vim.keymap.set("n", "<leader>c3", "<cmd>CompileO3<CR>",    { noremap = true, sil
 vim.keymap.set("n", "<leader>cd", "<cmd>CompileDebug<CR>", { noremap = true, silent = true, desc = "Compile with debug symbols" })
 vim.keymap.set("n", "<leader>;",  "A;<Esc>",               { noremap = true, silent = true, desc = "Append ; to line end" })
 
+-- 10a1. SAVED COMPILE COMMAND (per-directory, persisted)
+local _compile_cmds_file = vim.fn.stdpath("data") .. "/compile_cmds.json"
+
+local function _load_compile_cmds()
+    local f = io.open(_compile_cmds_file, "r")
+    if not f then return {} end
+    local content = f:read("*a"); f:close()
+    local ok, data = pcall(vim.fn.json_decode, content)
+    if ok and type(data) == "table" then return data end
+    return {}
+end
+
+local function _save_compile_cmds(data)
+    local json = vim.fn.json_encode(data)
+    local f = io.open(_compile_cmds_file, "w")
+    if f then f:write(json); f:close() end
+end
+
+local function _get_dir_key()
+    local dir = vim.fn.expand('%:p:h')
+    if dir == "" then
+        dir = vim.fn.getcwd()
+    end
+    return dir
+end
+
+vim.api.nvim_create_user_command('SaveCompile', function(opts)
+    local cmd = opts.args
+    if cmd == "" then
+        print("Usage: :SaveCompile <command>")
+        print("Example: :SaveCompile gcc -O2 -o %< -Iinclude %")
+        return
+    end
+    local dir_key = _get_dir_key()
+    local cmds = _load_compile_cmds()
+    cmds[dir_key] = cmd
+    _save_compile_cmds(cmds)
+    print(string.format('Saved compile command for "%s"', dir_key))
+    print("  Command: " .. cmd)
+    print("  Run with :QuickCompile or <leader>sc")
+end, { nargs = "+", desc = "Save a compile command for the current directory" })
+
+vim.api.nvim_create_user_command('QuickCompile', function()
+    local dir_key = _get_dir_key()
+    local cmds = _load_compile_cmds()
+    local cmd = cmds[dir_key]
+    if not cmd then
+        print(string.format('No saved compile command for "%s"', dir_key))
+        print("Use :SaveCompile <command> to save one first.")
+        return
+    end
+    local file = vim.fn.expand('%:p')
+    local cmd_expanded = cmd:gsub('%%', file)
+    print("Compiling: " .. cmd_expanded)
+    local output = vim.fn.system(cmd_expanded)
+    if vim.v.shell_error ~= 0 then
+        print("Compilation Error:\n" .. output)
+    else
+        print("Compilation Successful!")
+    end
+end, { desc = "Run the saved compile command for the current directory" })
+
+vim.keymap.set("n", "<leader>sc", "<cmd>QuickCompile<CR>", { noremap = true, silent = true, desc = "Quick compile (saved command)" })
+
 vim.api.nvim_create_user_command('MyCommands', function()
-    local cmds = { "MainArgs", "MainVoid", "AddProto", "CommentBox", "Compile", "MyCommands", "Autogen", "Explain", "Aiconfig", "AddShortcut", "ClearShortcuts", "ListShortcuts" }
+    local cmds = { "MainArgs", "MainVoid", "AddProto", "CommentBox", "Compile", "SaveCompile", "QuickCompile", "MyCommands", "Autogen", "Explain", "Aiconfig", "AddShortcut", "ClearShortcuts", "ListShortcuts" }
     print("Custom Commands: " .. table.concat(cmds, ", "))
 end, { desc = "List custom commands defined in init.lua" })
 
@@ -779,6 +843,9 @@ local function show_keymaps()
             { keys = "<leader>c2",      mode = "n",   desc = "Compile with -O2" },
             { keys = "<leader>c3",      mode = "n",   desc = "Compile with -O3" },
             { keys = "<leader>cd",      mode = "n",   desc = "Compile with -Og -g (debug)" },
+            { keys = "<leader>sc",      mode = "n",   desc = "Quick compile (saved command)" },
+            { keys = ":SaveCompile <c>", mode = "cmd", desc = "Save compile command per directory" },
+            { keys = ":QuickCompile",   mode = "cmd", desc = "Run saved compile command" },
             { keys = "<leader>;",       mode = "n",   desc = "Append ; to line end" },
         }},
         { title = "C/C++ Scaffolding", maps = {
