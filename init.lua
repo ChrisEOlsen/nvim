@@ -574,6 +574,60 @@ vim.api.nvim_create_user_command('SaveCompile', function(opts)
     print("  Run with :QuickCompile or <leader>sc")
 end, { nargs = "+", desc = "Save a compile command for the current directory" })
 
+-- 10a2. SAVED RUN COMMAND (per-directory, persisted)
+local _run_cmds_file = vim.fn.stdpath("data") .. "/run_cmds.json"
+
+local function _load_run_cmds()
+    local f = io.open(_run_cmds_file, "r")
+    if not f then return {} end
+    local content = f:read("*a"); f:close()
+    local ok, data = pcall(vim.fn.json_decode, content)
+    if ok and type(data) == "table" then return data end
+    return {}
+end
+
+local function _save_run_cmds(data)
+    local json = vim.fn.json_encode(data)
+    local f = io.open(_run_cmds_file, "w")
+    if f then f:write(json); f:close() end
+end
+
+vim.api.nvim_create_user_command('SaveRun', function(opts)
+    local cmd = opts.args
+    if cmd == "" then
+        print("Usage: :SaveRun <command>")
+        print("Example: :SaveRun ./%<")
+        return
+    end
+    local dir_key = _get_dir_key()
+    local cmds = _load_run_cmds()
+    cmds[dir_key] = cmd
+    _save_run_cmds(cmds)
+    print(string.format('Saved run command for "%s"', dir_key))
+    print("  Command: " .. cmd)
+    print("  Run with :QuickRun or <leader>sr")
+end, { nargs = "+", desc = "Save a run command for the current directory" })
+
+vim.api.nvim_create_user_command('QuickRun', function()
+    local dir_key = _get_dir_key()
+    local cmds = _load_run_cmds()
+    local cmd = cmds[dir_key]
+    if not cmd then
+        print(string.format('No saved run command for "%s"', dir_key))
+        print("Use :SaveRun <command> to save one first.")
+        return
+    end
+    local file = vim.fn.expand('%:p')
+    local cmd_expanded = cmd:gsub('%%', file)
+    print("Running: " .. cmd_expanded)
+    local output = vim.fn.system(cmd_expanded)
+    if vim.v.shell_error ~= 0 then
+        print("Run Error:\n" .. output)
+    else
+        print("Run Successful!")
+    end
+end, { desc = "Run the saved run command for the current directory" })
+
 vim.api.nvim_create_user_command('QuickCompile', function()
     local dir_key = _get_dir_key()
     local cmds = _load_compile_cmds()
@@ -595,9 +649,10 @@ vim.api.nvim_create_user_command('QuickCompile', function()
 end, { desc = "Run the saved compile command for the current directory" })
 
 vim.keymap.set("n", "<leader>sc", "<cmd>QuickCompile<CR>", { noremap = true, silent = true, desc = "Quick compile (saved command)" })
+vim.keymap.set("n", "<leader>sr", "<cmd>QuickRun<CR>",    { noremap = true, silent = true, desc = "Quick run (saved command)" })
 
 vim.api.nvim_create_user_command('MyCommands', function()
-    local cmds = { "MainArgs", "MainVoid", "AddProto", "CommentBox", "Compile", "SaveCompile", "QuickCompile", "MyCommands", "Autogen", "Explain", "Aiconfig", "AddShortcut", "ClearShortcuts", "ListShortcuts" }
+    local cmds = { "MainArgs", "MainVoid", "AddProto", "CommentBox", "Compile", "SaveCompile", "QuickCompile", "SaveRun", "QuickRun", "MyCommands", "Autogen", "Explain", "Aiconfig", "AddShortcut", "ClearShortcuts", "ListShortcuts" }
     print("Custom Commands: " .. table.concat(cmds, ", "))
 end, { desc = "List custom commands defined in init.lua" })
 
@@ -823,6 +878,9 @@ local function show_keymaps()
             { keys = "<leader>sc",      mode = "n",   desc = "Quick compile (saved command)" },
             { keys = ":SaveCompile <c>", mode = "cmd", desc = "Save compile command per directory" },
             { keys = ":QuickCompile",   mode = "cmd", desc = "Run saved compile command" },
+            { keys = "<leader>sr",      mode = "n",   desc = "Quick run (saved command)" },
+            { keys = ":SaveRun <c>",    mode = "cmd", desc = "Save run command per directory" },
+            { keys = ":QuickRun",       mode = "cmd", desc = "Run saved run command" },
             { keys = "<leader>;",       mode = "n",   desc = "Append ; to line end" },
         }},
         { title = "C/C++ Scaffolding", maps = {
