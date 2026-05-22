@@ -1,4 +1,4 @@
-# AI-Native Monk Config
+# NEOVIM with AI
 
 AI-first Neovim for C/C++. Privacy-focused, minimal, fast.
 
