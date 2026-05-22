@@ -133,7 +133,7 @@ Edit the prompt files directly to tune AI behaviour:
 | Plugin | Role |
 |--------|------|
 | [lazy.nvim](https://github.com/folke/lazy.nvim) | Package manager |
-| [github-nvim-theme](https://github.com/projekt0n/github-nvim-theme) | Theme |
+| [vscode.nvim](https://github.com/Mofiqul/vscode.nvim) | Theme (VSCode Dark Modern) |
 | [nvim-lspconfig](https://github.com/neovim/nvim-lspconfig) | LSP (clangd) |
 | [fzf-lua](https://github.com/ibhagwan/fzf-lua) | Fuzzy finder |
 | [nvim-cmp](https://github.com/hrsh7th/nvim-cmp) | Autocompletion |

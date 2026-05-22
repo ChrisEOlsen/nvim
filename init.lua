@@ -61,39 +61,21 @@ load_theme_state()
 
 -- 2. PLUGINS
 require("lazy").setup({
-  -- The Theme: GitHub Theme (Reliable, handles cursors well)
+  -- The Theme: VS Code Dark Modern
   {
-    "projekt0n/github-nvim-theme",
-    lazy = false,    -- Load immediately
-    priority = 1000, -- Load before everything else
+    "Mofiqul/vscode.nvim",
+    lazy = false,
+    priority = 1000,
     config = function()
-      require("github-theme").setup({
-        -- Minimal config
-        options = {
-          compile_path = vim.fn.stdpath("cache") .. "/github-theme",
-          compile_file_suffix = "_compiled",
-          hide_end_of_buffer = true, -- Hide ~ at end of buffer
-          terminal_colors = true,
-          dim_inactive = false,
-          styles = {
-            comments = "italic",
-            functions = "NONE",
-            keywords = "NONE",
-            variables = "NONE",
-            conditionals = "NONE",
-            constants = "NONE",
-            numbers = "NONE",
-            operators = "NONE",
-            strings = "NONE",
-            types = "NONE",
-          },
-        },
+      require("vscode").setup({
+        transparent = vim.g.is_transparent or false,
+        italic_comments = true,
+        terminal_colors = true,
       })
-      -- Apply initial theme based on loaded state
       if vim.g.is_dark_mode then
-          vim.cmd("colorscheme github_dark")
+        require("vscode").load("dark")
       else
-          vim.cmd("colorscheme github_light")
+        require("vscode").load("light")
       end
     end,
   },
@@ -219,29 +201,27 @@ end
 local function toggle_theme()
     if vim.g.is_dark_mode and not vim.g.is_transparent then
         -- Dark -> Light
-        vim.cmd("colorscheme github_light")
         vim.g.is_dark_mode = false
         vim.g.is_transparent = false
         print("Theme: Light")
     elseif not vim.g.is_dark_mode and not vim.g.is_transparent then
         -- Light -> Dark Transparent
-        vim.cmd("colorscheme github_dark")
         vim.g.is_dark_mode = true
         vim.g.is_transparent = true
         print("Theme: Dark (Transparent)")
     elseif vim.g.is_dark_mode and vim.g.is_transparent then
         -- Dark Transparent -> Light Transparent
-        vim.cmd("colorscheme github_light")
         vim.g.is_dark_mode = false
         vim.g.is_transparent = true
         print("Theme: Light (Transparent)")
     else
         -- Light Transparent -> Dark Opaque
-        vim.cmd("colorscheme github_dark")
         vim.g.is_dark_mode = true
         vim.g.is_transparent = false
         print("Theme: Dark")
     end
+    require("vscode").setup({ transparent = vim.g.is_transparent or false, italic_comments = true, terminal_colors = true })
+    require("vscode").load(vim.g.is_dark_mode and "dark" or "light")
     save_theme_state()
     fix_cursor() -- Apply cursor/bg fix immediately
 end
@@ -300,11 +280,8 @@ vim.api.nvim_create_user_command('SyntaxHighlight', function(opts)
     save_theme_state()
     if vim.g.syntax_highlight then
         -- Reload colorscheme to restore its syntax colors
-        if vim.g.is_dark_mode then
-            vim.cmd("colorscheme github_dark")
-        else
-            vim.cmd("colorscheme github_light")
-        end
+        require("vscode").setup({ transparent = vim.g.is_transparent or false, italic_comments = true, terminal_colors = true })
+        require("vscode").load(vim.g.is_dark_mode and "dark" or "light")
         print("Syntax highlight: on (VSCode style)")
     else
         apply_monk_mode()
