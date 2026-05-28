@@ -158,7 +158,7 @@ local function fix_cursor()
     if vim.g.is_transparent then
         bg_color = "NONE"
     elseif vim.g.is_dark_mode then
-        bg_color = "#282c34"
+        bg_color = "#0a0a0a"
     else
         bg_color = "#ffffff"
     end
@@ -179,9 +179,9 @@ local function fix_cursor()
 
     if vim.g.is_dark_mode then
         -- DARK MODE details
-        vim.api.nvim_set_hl(0, "Cursor", { bg = "#ffffff", fg = "#282c34", force = true })
-        vim.api.nvim_set_hl(0, "TermCursor", { bg = "#ffffff", fg = "#282c34", force = true })
-        vim.api.nvim_set_hl(0, "CursorLine", { bg = "#2c323c", force = true })
+        vim.api.nvim_set_hl(0, "Cursor", { bg = "#ffffff", fg = "#0a0a0a", force = true })
+        vim.api.nvim_set_hl(0, "TermCursor", { bg = "#ffffff", fg = "#0a0a0a", force = true })
+        vim.api.nvim_set_hl(0, "CursorLine", { bg = "#161616", force = true })
 
         -- Diagnostic Line Highlights (Dark Red/Yellow)
         vim.api.nvim_set_hl(0, "DiagnosticLineError", { bg = "#5c2424", force = true })
