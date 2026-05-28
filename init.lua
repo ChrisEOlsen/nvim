@@ -895,7 +895,7 @@ local function show_keymaps()
             { keys = "<leader>ac",                    mode = "n",   desc = "AI: pick model from favorites" },
             { keys = "<leader>ah",                    mode = "n",   desc = "AI: history for current file" },
             { keys = ":Aiconfig <model> [provider]",  mode = "cmd", desc = "Set AI model and optional provider" },
-            { keys = ":AddModel <model-id>",          mode = "cmd", desc = "Add model ID to favorites" },
+            { keys = ":AddModel <model> [provider]", mode = "cmd", desc = "Add model+provider pair to favorites" },
         }},
         { title = "Completion  (insert mode)", maps = {
             { keys = "<C-Space>",       mode = "i",   desc = "Trigger completion" },

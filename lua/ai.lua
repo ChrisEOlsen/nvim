@@ -22,6 +22,12 @@ local function load_ai_config()
         if ok and type(state) == "table" then
             if not state.favorites then
                 state.favorites = {}
+            else
+                for i, entry in ipairs(state.favorites) do
+                    if type(entry) == "string" then
+                        state.favorites[i] = { model = entry, provider = nil }
+                    end
+                end
             end
             return state
         end
@@ -578,21 +584,34 @@ vim.api.nvim_create_user_command("Aiconfig", function(opts)
 end, { nargs = "+", desc = "Set AI model and optional provider (e.g. :Aiconfig qwen/qwen3-coder Google Vertex)" })
 
 vim.api.nvim_create_user_command("AddModel", function(opts)
-    local id = vim.trim(opts.args)
+    -- Usage: :AddModel <model-id> [provider]
+    local space = opts.args:find(" ")
+    local id, prov
+    if space then
+        id = opts.args:sub(1, space - 1)
+        local p = opts.args:sub(space + 1)
+        prov = (p == "any") and nil or p
+    else
+        id = opts.args
+    end
+    id = vim.trim(id)
     if id == "" then
-        print("Usage: :AddModel <model-id>")
+        print("Usage: :AddModel <model-id> [provider]")
         return
     end
     for _, existing in ipairs(M.config.favorites) do
-        if existing == id then
-            print("Already in favorites: " .. id)
+        if existing.model == id and existing.provider == prov then
+            local prov_str = prov or "any (OpenRouter chooses)"
+            print("Already in favorites: " .. id .. " | provider: " .. prov_str)
             return
         end
     end
-    table.insert(M.config.favorites, id)
+    table.insert(M.config.favorites, { model = id, provider = prov })
     save_ai_config()
-    print("Added to favorites: " .. id)
-end, { nargs = "+", desc = "Add a model ID to the AI favorites list" })
+    local msg = "Added to favorites: " .. id
+    msg = msg .. " | provider: " .. (prov or "any (OpenRouter chooses)")
+    print(msg)
+end, { nargs = "+", desc = "Add a model+provider pair to favorites (e.g. :AddModel qwen/qwen3-coder Google Vertex)" })
 
 vim.keymap.set("n", "<leader>ah", function()
     local bufnr = vim.api.nvim_get_current_buf()

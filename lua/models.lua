@@ -3,15 +3,16 @@
 
 local M = {}
 
-local HEADER = " Model Picker — j/k navigate, <Enter> select"
+local HEADER = " Model Picker — j/k navigate, <Enter> select, d delete"
 
 local function build_lines(favorites)
     local panel_width = math.floor(vim.o.columns / 2)
     local lines = {}
     table.insert(lines, HEADER)
     table.insert(lines, " " .. string.rep("─", panel_width - 2))
-    for _, id in ipairs(favorites) do
-        table.insert(lines, "  " .. id)
+    for _, entry in ipairs(favorites) do
+        local prov = entry.provider or "any (OpenRouter chooses)"
+        table.insert(lines, "  " .. entry.model .. "  (" .. prov .. ")")
     end
     return lines
 end
@@ -41,11 +42,12 @@ function M.open_picker()
     local lines = build_lines(favorites)
     local buf = require("panel").open(lines, { wrap = false })
 
-    -- Position cursor on the currently active model if it's in the list
+    -- Position cursor on the currently active model+provider if it's in the list
     local current = ai.config.model
+    local current_prov = ai.config.provider
     local start_line = fav_line(1)
-    for i, id in ipairs(favorites) do
-        if id == current then
+    for i, entry in ipairs(favorites) do
+        if entry.model == current and entry.provider == current_prov then
             start_line = fav_line(i)
             break
         end
@@ -58,10 +60,25 @@ function M.open_picker()
         local idx = line_to_fav_index(lnum)
         if not idx or idx > #favorites then return end
         local chosen = favorites[idx]
-        ai.config.model = chosen
+        ai.config.model = chosen.model
+        ai.config.provider = chosen.provider
         ai.save_config()
         vim.cmd("close")
-        print("AI model: " .. chosen)
+        local prov_str = chosen.provider or "any (OpenRouter chooses)"
+        print("AI model: " .. chosen.model .. " | provider: " .. prov_str)
+    end, { buffer = buf, noremap = true, silent = true })
+
+    -- d: delete model from favorites
+    vim.keymap.set("n", "d", function()
+        local lnum = vim.api.nvim_win_get_cursor(0)[1]
+        local idx = line_to_fav_index(lnum)
+        if not idx or idx > #favorites then return end
+        local removed = table.remove(favorites, idx)
+        ai.save_config()
+        local prov_str = removed.provider or "any (OpenRouter chooses)"
+        print("Removed from favorites: " .. removed.model .. " | provider: " .. prov_str)
+        vim.cmd("close")
+        M.open_picker()
     end, { buffer = buf, noremap = true, silent = true })
 end
 
