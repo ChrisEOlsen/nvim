@@ -534,18 +534,25 @@ end, { range = 2, desc = "Explain selected code using AI" })
 
 -- Function to update statusline after model changes
 local function update_statusline()
-    -- Configure model indicator in statusline
-    if vim.o.statusline == "" or not vim.o.statusline:match("%%=.*AI:") then
-        -- Only add if not already present
-        vim.o.statusline = (vim.o.statusline or "") .. "%=%{v:lua.require'ai'.get_model_indicator()}%="
+    -- Remove any existing AI indicator, then prepend a fresh one on the left
+    local marker = "%{v:lua.require'ai'.get_model_indicator()}"
+    local sl = vim.o.statusline or ""
+    while true do
+        local s, e = sl:find(marker, 1, true)
+        if not s then break end
+        sl = sl:sub(1, s - 1) .. sl:sub(e + 1)
+    end
+    if not sl:find("get_model_indicator") then
+        vim.o.statusline = marker .. sl
     end
 end
 
 -- Expose model info for statusline
 function M.get_model_indicator()
     local model = M.config.model
-    local short_name = model:match("/([^/]+)$") or model -- Display just the model name after the slash
-    return " AI: " .. short_name .. " "
+    local short_name = model:match("/([^/]+)$") or model
+    local prov = M.config.provider or "any"
+    return string.format("AI: %s (%s) ", short_name, prov)
 end
 
 -- Set up statusline when module loads
