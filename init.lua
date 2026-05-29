@@ -54,7 +54,35 @@ require("lazy").setup({
         },
         git = { enable = true, ignore = true },
       })
+      -- Map T to open in new tab
+      vim.api.nvim_create_autocmd("BufWinEnter", {
+        pattern = "NvimTree_*",
+        callback = function(args)
+          vim.keymap.set("n", "T", function()
+            local node = require("nvim-tree.api").tree.get_node_under_cursor()
+            if node then
+              vim.cmd("tabe " .. node.absolute_path)
+            end
+          end, { buffer = args.buf, desc = "Open in new tab" })
+        end,
+      })
       vim.keymap.set("n", "<leader>ee", require("nvim-tree.api").tree.toggle, { desc = "Toggle file explorer" })
+      vim.keymap.set("n", "<leader>w", function()
+        local buf_name = vim.api.nvim_buf_get_name(0)
+        local is_tree = buf_name:find("NvimTree")
+        if is_tree then
+          vim.cmd("wincmd p")
+        else
+          -- Find and focus nvim-tree window
+          for _, win in ipairs(vim.api.nvim_list_wins()) do
+            local wbuf = vim.api.nvim_win_get_buf(win)
+            if vim.api.nvim_buf_get_name(wbuf):find("NvimTree") then
+              vim.api.nvim_set_current_win(win)
+              return
+            end
+          end
+        end
+      end, { desc = "Toggle focus: nvim-tree / code" })
     end
   },
 
