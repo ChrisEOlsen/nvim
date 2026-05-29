@@ -16,49 +16,6 @@ if not vim.loop.fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
--- 1.1 THEME STATE PERSISTENCE
-local theme_state_file = vim.fn.stdpath("data") .. "/theme_state.json"
-
-local function save_theme_state()
-    local state = {
-        is_dark_mode = vim.g.is_dark_mode,
-        is_transparent = vim.g.is_transparent,
-        syntax_highlight = vim.g.syntax_highlight,
-    }
-    local json = vim.fn.json_encode(state)
-    local f = io.open(theme_state_file, "w")
-    if f then
-        f:write(json)
-        f:close()
-    end
-end
-
-local function load_theme_state()
-    local f = io.open(theme_state_file, "r")
-    if f then
-        local content = f:read("*a")
-        f:close()
-        local ok, state = pcall(vim.fn.json_decode, content)
-        if ok and state then
-            vim.g.is_dark_mode = state.is_dark_mode
-            vim.g.is_transparent = state.is_transparent
-            vim.g.syntax_highlight = state.syntax_highlight or false
-        else
-            -- Default fallbacks if JSON invalid
-            vim.g.is_dark_mode = true
-            vim.g.is_transparent = false
-            vim.g.syntax_highlight = false
-        end
-    else
-        -- Defaults if file doesn't exist
-        vim.g.is_dark_mode = true
-        vim.g.is_transparent = false
-        vim.g.syntax_highlight = false
-    end
-end
-
-load_theme_state()
-
 -- 2. PLUGINS
 -- Enable default Neovim syntax highlighting
 vim.cmd("syntax on")
@@ -70,12 +27,42 @@ require("lazy").setup({
     tag = "v1.0.0",
   },
 
+  -- The Explorer: File Tree
+  {
+    "nvim-tree/nvim-tree.lua",
+    dependencies = { "nvim-tree/nvim-web-devicons" },
+    config = function()
+      require("nvim-tree").setup({
+        filters = { dotfiles = true },
+        view = {
+          width = 40,
+          relativenumber = true,
+        },
+        renderer = {
+          indent_markers = { enable = true },
+          highlight_git = true,
+        },
+        update_focused_file = {
+          enable = true,
+          update_cwd = true,
+        },
+        actions = {
+          open_file = {
+            quit_on_open = false,
+            resize_window = false,
+          },
+        },
+        git = { enable = true, ignore = true },
+      })
+      vim.keymap.set("n", "<leader>ee", require("nvim-tree.api").tree.toggle, { desc = "Toggle file explorer" })
+    end
+  },
+
   -- The Eyes: Fuzzy Finder (Fastest)
   {
     "ibhagwan/fzf-lua",
     dependencies = {
         { "junegunn/fzf", build = "./install --bin" },
-        "nvim-tree/nvim-web-devicons",
     },
     config = function()
       local fzf = require("fzf-lua")
@@ -114,6 +101,16 @@ require("lazy").setup({
         vim.keymap.set("n", "<leader>gd", ":Gdiffsplit<CR>", { desc = "Git Diff Split" })
     end
   },
+
+  -- Theme
+  {
+    "shaunsingh/nord.nvim",
+    lazy = false,
+    priority = 1000,
+    config = function()
+      vim.cmd("colorscheme nord")
+    end
+  },
 })
 
 -- 3. CORE SETTINGS
@@ -134,145 +131,7 @@ vim.opt.shiftwidth = 4
 vim.opt.expandtab = true
 vim.opt.softtabstop = 4
 
--- 4. SIMPLISTIC THEME TOGGLE (Light/Dark)
--- vim.g.is_dark_mode and vim.g.is_transparent are initialized in Section 1.1
-
-local function fix_cursor()
-    local bg_color
-    if vim.g.is_transparent then
-        bg_color = "NONE"
-    elseif vim.g.is_dark_mode then
-        bg_color = "#0a0a0a"
-    else
-        bg_color = "#ffffff"
-    end
-
-    local fg_color = vim.g.is_dark_mode and "#ffffff" or "#000000"
-
-    -- Base Colors
-    vim.api.nvim_set_hl(0, "Normal", { bg = bg_color, fg = fg_color, force = true })
-    vim.api.nvim_set_hl(0, "NormalNC", { bg = bg_color, fg = fg_color, force = true })
-    -- Hide EndOfBuffer tildes by matching bg (or invisible if transparent)
-    -- Ideally use fillchars, but keeping this logic for consistency
-    local eob_fg = (bg_color == "NONE") and "NONE" or bg_color
-    vim.api.nvim_set_hl(0, "EndOfBuffer", { bg = bg_color, fg = eob_fg, force = true })
-    
-    vim.api.nvim_set_hl(0, "SignColumn", { bg = bg_color, force = true })
-    vim.api.nvim_set_hl(0, "LineNr", { bg = bg_color, force = true })
-    vim.api.nvim_set_hl(0, "ZenBg", { bg = bg_color, force = true })
-
-    if vim.g.is_dark_mode then
-        -- DARK MODE details
-        vim.api.nvim_set_hl(0, "Cursor", { bg = "#ffffff", fg = "#0a0a0a", force = true })
-        vim.api.nvim_set_hl(0, "TermCursor", { bg = "#ffffff", fg = "#0a0a0a", force = true })
-        vim.api.nvim_set_hl(0, "CursorLine", { bg = "#161616", force = true })
-
-        -- Diagnostic Line Highlights (Dark Red/Yellow)
-        vim.api.nvim_set_hl(0, "DiagnosticLineError", { bg = "#5c2424", force = true })
-        vim.api.nvim_set_hl(0, "DiagnosticLineWarn", { bg = "#5c4e24", force = true })
-    else
-        -- LIGHT MODE details
-        vim.api.nvim_set_hl(0, "Cursor", { bg = "#000000", fg = "#ffffff", force = true })
-        vim.api.nvim_set_hl(0, "TermCursor", { bg = "#000000", fg = "#ffffff", force = true })
-        vim.api.nvim_set_hl(0, "CursorLine", { bg = "#f0f0f0", force = true })
-
-        -- Diagnostic Line Highlights (Light Red/Yellow)
-        vim.api.nvim_set_hl(0, "DiagnosticLineError", { bg = "#ffebe9", force = true })
-        vim.api.nvim_set_hl(0, "DiagnosticLineWarn", { bg = "#fff8c4", force = true })
-    end
-end
-
-local function toggle_theme()
-    if vim.g.is_dark_mode and not vim.g.is_transparent then
-        -- Dark -> Light
-        vim.g.is_dark_mode = false
-        vim.g.is_transparent = false
-        print("Theme: Light")
-    elseif not vim.g.is_dark_mode and not vim.g.is_transparent then
-        -- Light -> Dark Transparent
-        vim.g.is_dark_mode = true
-        vim.g.is_transparent = true
-        print("Theme: Dark (Transparent)")
-    elseif vim.g.is_dark_mode and vim.g.is_transparent then
-        -- Dark Transparent -> Light Transparent
-        vim.g.is_dark_mode = false
-        vim.g.is_transparent = true
-        print("Theme: Light (Transparent)")
-    else
-        -- Light Transparent -> Dark Opaque
-        vim.g.is_dark_mode = true
-        vim.g.is_transparent = false
-        print("Theme: Dark")
-    end
-    vim.cmd("colorscheme " .. (vim.g.is_dark_mode and "desert" or "default"))
-    save_theme_state()
-    fix_cursor() -- Apply cursor/bg fix immediately
-end
-
-vim.keymap.set("n", "<leader>tm", toggle_theme, { noremap = true, silent = true, desc = "Toggle Theme" })
-
--- Apply initial state fixes
-fix_cursor()
-
--- 5. MONK MODE: PLAIN TEXT WITH COMMENTS
--- We MUST have 'syntax on' to detect comments, but we strip all other colors.
-local monk_mode_syntax_groups = {
-    "Constant", "Identifier", "Statement", "PreProc", "Type", "Special",
-    "Underlined", "Error", "Todo", "String", "Function", "Conditional",
-    "Repeat", "Operator", "Structure", "Boolean", "Number", "Float",
-    "Label", "Keyword", "Exception", "Include", "Define", "Macro",
-    "PreCondit", "StorageClass", "Typedef", "Tag", "SpecialChar",
-    "Delimiter", "SpecialComment", "Debug",
-    -- LSP Semantic Token Groups
-    "@lsp.type.class", "@lsp.type.comment", "@lsp.type.decorator",
-    "@lsp.type.enum", "@lsp.type.enumMember", "@lsp.type.event",
-    "@lsp.type.function", "@lsp.type.interface", "@lsp.type.keyword",
-    "@lsp.type.macro", "@lsp.type.method", "@lsp.type.modifier",
-    "@lsp.type.namespace", "@lsp.type.number", "@lsp.type.operator",
-    "@lsp.type.parameter", "@lsp.type.property", "@lsp.type.regexp",
-    "@lsp.type.string", "@lsp.type.struct", "@lsp.type.type",
-    "@lsp.type.typeParameter", "@lsp.type.variable",
-}
-
-local function apply_monk_mode()
-    vim.cmd("syntax on")
-    for _, group in ipairs(monk_mode_syntax_groups) do
-        vim.api.nvim_set_hl(0, group, { link = "Normal" })
-    end
-    vim.api.nvim_set_hl(0, "Comment", { fg = "#808080", italic = true, force = true })
-end
-
-vim.api.nvim_create_autocmd({ "ColorScheme", "BufEnter" }, {
-    pattern = "*",
-    callback = function()
-        if not vim.g.syntax_highlight then
-            apply_monk_mode()
-        end
-        fix_cursor()
-    end,
-})
-
--- SyntaxHighlight: 1 = full colors, 0 = monk mode (plain text + grey comments)
-vim.api.nvim_create_user_command('SyntaxHighlight', function(opts)
-    local val = tonumber(opts.args)
-    if val == nil then
-        print("Usage: :SyntaxHighlight <0|1>")
-        return
-    end
-    vim.g.syntax_highlight = (val == 1)
-    save_theme_state()
-    if vim.g.syntax_highlight then
-        -- Reload colorscheme to restore its syntax colors
-        vim.cmd("colorscheme " .. (vim.g.is_dark_mode and "desert" or "default"))
-        print("Syntax highlight: on")
-    else
-        apply_monk_mode()
-        fix_cursor()
-        print("Syntax highlight: off (monk mode)")
-    end
-end, { nargs = 1, desc = "Set syntax highlighting: 1=full colors, 0=monk mode" })
-
--- 6. REMOTE CLIPBOARD (OSC 52)
+-- 4. REMOTE CLIPBOARD (OSC 52)
 vim.opt.clipboard = "unnamedplus"
 local function paste() 
   return { vim.fn.split(vim.fn.getreg(''), '\n'), vim.fn.getregtype('') } 
@@ -838,9 +697,28 @@ end, { desc = "Dump indent debug info" })
 local function show_keymaps()
     local sections = {
         { title = "Navigation / Search", maps = {
+            { keys = "<leader>ee",      mode = "n",   desc = "Toggle file explorer" },
             { keys = "<leader>ff",      mode = "n",   desc = "Find files (fzf)" },
             { keys = "<leader>fg",      mode = "n",   desc = "Live grep (fzf)" },
             { keys = "<leader>fb",      mode = "n",   desc = "List buffers (fzf)" },
+        }},
+        { title = "File Explorer  (nvim-tree buffer)", maps = {
+            { keys = "o",               mode = "n",   desc = "Open file" },
+            { keys = "Enter",           mode = "n",   desc = "Open file" },
+            { keys = "h",               mode = "n",   desc = "Open parent directory" },
+            { keys = "l",               mode = "n",   desc = "Open/expand directory" },
+            { keys = "a",               mode = "n",   desc = "Create file or directory" },
+            { keys = "d",               mode = "n",   desc = "Create directory (add / at end)" },
+            { keys = "D",               mode = "n",   desc = "Delete node" },
+            { keys = "r",               mode = "n",   desc = "Rename node" },
+            { keys = "x",               mode = "n",   desc = "Cut node" },
+            { keys = "c",               mode = "n",   desc = "Copy node" },
+            { keys = "p",               mode = "n",   desc = "Paste node" },
+            { keys = "i",               mode = "n",   desc = "Toggle hidden files" },
+            { keys = "[c",              mode = "n",   desc = "Prev git item" },
+            { keys = "]c",              mode = "n",   desc = "Next git item" },
+            { keys = "<leader>ee",      mode = "n",   desc = "Toggle explorer" },
+            { keys = "P",               mode = "n",   desc = "Toggle cwd" },
         }},
         { title = "Git", maps = {
             { keys = "<leader>gs",      mode = "n",   desc = "Git status" },
@@ -893,7 +771,6 @@ local function show_keymaps()
             { keys = ":ClearShortcuts",     mode = "cmd", desc = "Clear all shortcut slots" },
         }},
         { title = "Misc", maps = {
-            { keys = "<leader>tm",             mode = "n",   desc = "Toggle theme (dark/light/transparent)" },
             { keys = "<leader>z",              mode = "n",   desc = "Zen mode" },
             { keys = "<Esc>",                  mode = "n",   desc = "Clear search highlight" },
             { keys = "<leader>?",              mode = "n",   desc = "Show this keymap reference" },
