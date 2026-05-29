@@ -60,26 +60,10 @@ end
 load_theme_state()
 
 -- 2. PLUGINS
-require("lazy").setup({
-  -- The Theme: VS Code Dark Modern
-  {
-    "Mofiqul/vscode.nvim",
-    lazy = false,
-    priority = 1000,
-    config = function()
-      require("vscode").setup({
-        transparent = vim.g.is_transparent or false,
-        italic_comments = true,
-        terminal_colors = true,
-      })
-      if vim.g.is_dark_mode then
-        require("vscode").load("dark")
-      else
-        require("vscode").load("light")
-      end
-    end,
-  },
+-- Enable default Neovim syntax highlighting
+vim.cmd("syntax on")
 
+require("lazy").setup({
   -- The Brain: Connects Neovim to 'clangd'
   {
     "neovim/nvim-lspconfig",
@@ -220,8 +204,7 @@ local function toggle_theme()
         vim.g.is_transparent = false
         print("Theme: Dark")
     end
-    require("vscode").setup({ transparent = vim.g.is_transparent or false, italic_comments = true, terminal_colors = true })
-    require("vscode").load(vim.g.is_dark_mode and "dark" or "light")
+    vim.cmd("colorscheme " .. (vim.g.is_dark_mode and "desert" or "default"))
     save_theme_state()
     fix_cursor() -- Apply cursor/bg fix immediately
 end
@@ -269,7 +252,7 @@ vim.api.nvim_create_autocmd({ "ColorScheme", "BufEnter" }, {
     end,
 })
 
--- SyntaxHighlight: 1 = VSCode-style colors, 0 = monk mode (plain text + grey comments)
+-- SyntaxHighlight: 1 = full colors, 0 = monk mode (plain text + grey comments)
 vim.api.nvim_create_user_command('SyntaxHighlight', function(opts)
     local val = tonumber(opts.args)
     if val == nil then
@@ -280,15 +263,14 @@ vim.api.nvim_create_user_command('SyntaxHighlight', function(opts)
     save_theme_state()
     if vim.g.syntax_highlight then
         -- Reload colorscheme to restore its syntax colors
-        require("vscode").setup({ transparent = vim.g.is_transparent or false, italic_comments = true, terminal_colors = true })
-        require("vscode").load(vim.g.is_dark_mode and "dark" or "light")
-        print("Syntax highlight: on (VSCode style)")
+        vim.cmd("colorscheme " .. (vim.g.is_dark_mode and "desert" or "default"))
+        print("Syntax highlight: on")
     else
         apply_monk_mode()
         fix_cursor()
         print("Syntax highlight: off (monk mode)")
     end
-end, { nargs = 1, desc = "Set syntax highlighting: 1=VSCode style, 0=monk mode" })
+end, { nargs = 1, desc = "Set syntax highlighting: 1=full colors, 0=monk mode" })
 
 -- 6. REMOTE CLIPBOARD (OSC 52)
 vim.opt.clipboard = "unnamedplus"
@@ -915,7 +897,7 @@ local function show_keymaps()
             { keys = "<leader>z",              mode = "n",   desc = "Zen mode" },
             { keys = "<Esc>",                  mode = "n",   desc = "Clear search highlight" },
             { keys = "<leader>?",              mode = "n",   desc = "Show this keymap reference" },
-            { keys = ":SyntaxHighlight <0|1>", mode = "cmd", desc = "Syntax highlight: 1=VSCode style, 0=monk mode" },
+            { keys = ":SyntaxHighlight <0|1>", mode = "cmd", desc = "Syntax highlight: 1=full colors, 0=monk mode" },
             { keys = ":MyCommands",            mode = "cmd", desc = "List all custom commands" },
         }},
     }
