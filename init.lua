@@ -70,13 +70,23 @@ require("lazy").setup({
       vim.keymap.set("n", "<leader>w", function()
         local buf_name = vim.api.nvim_buf_get_name(0)
         local is_tree = buf_name:find("NvimTree")
+        local current_tab = vim.api.nvim_get_current_tabpage()
+        local wins_in_tab = vim.tbl_filter(
+          function(w) return vim.api.nvim_win_get_tabpage(w) == current_tab end,
+          vim.api.nvim_list_wins()
+        )
         if is_tree then
-          vim.cmd("wincmd p")
+          -- Focus first non-tree window in current tab
+          for _, win in ipairs(wins_in_tab) do
+            if not vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(win)):find("NvimTree") then
+              vim.api.nvim_set_current_win(win)
+              return
+            end
+          end
         else
-          -- Find and focus nvim-tree window
-          for _, win in ipairs(vim.api.nvim_list_wins()) do
-            local wbuf = vim.api.nvim_win_get_buf(win)
-            if vim.api.nvim_buf_get_name(wbuf):find("NvimTree") then
+          -- Focus nvim-tree window in current tab
+          for _, win in ipairs(wins_in_tab) do
+            if vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(win)):find("NvimTree") then
               vim.api.nvim_set_current_win(win)
               return
             end
