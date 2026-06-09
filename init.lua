@@ -142,11 +142,11 @@ require("lazy").setup({
 
   -- Theme
   {
-    "shaunsingh/nord.nvim",
+    "sainnhe/everforest",
     lazy = false,
     priority = 1000,
     config = function()
-      vim.cmd("colorscheme nord")
+      vim.cmd("colorscheme everforest")
     end
   },
 })
