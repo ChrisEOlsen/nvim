@@ -142,11 +142,12 @@ require("lazy").setup({
 
   -- Theme
   {
-    "sainnhe/everforest",
+    "savq/melange-nvim",
     lazy = false,
     priority = 1000,
     config = function()
-      vim.cmd("colorscheme everforest")
+      vim.o.background = "dark"
+      vim.cmd("colorscheme melange")
     end
   },
 })
